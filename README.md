@@ -296,7 +296,7 @@ Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaq
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.1") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.2") }
 ```
 
 Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`

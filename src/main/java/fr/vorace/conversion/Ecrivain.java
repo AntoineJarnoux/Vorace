@@ -151,6 +151,9 @@ final class Ecrivain {
     }
 
     private String ecrireModele(JsonObject m, String chemin, String quoi) {
+        // modèle 3D sans réglages d'affichage : il serait vu de face dans l'inventaire et mal placé en main ;
+        // on lui donne ceux d'un bloc du jeu (vue de trois quarts), comme le ferait Blockbench
+        if (!m.has("parent") && m.has("elements") && !m.has("display")) m.addProperty("parent", "minecraft:block/block");
         // références de textures -> textures recopiées dans ressources/textures (Vorace les relie à son pack)
         if (m.has("textures") && m.get("textures").isJsonObject()) {
             JsonObject t = m.getAsJsonObject("textures");

@@ -72,8 +72,8 @@ public final class TestConversion {
         verifier("EMERALD".equals(saphir.get("materiau")) && String.valueOf(saphir.get("description")).contains("Une gemme rare"), "Nexo : modèle d'objet (template) appliqué");
         verifier("converti/nexo/minecraft/objets/saphir".equals(saphir.get("modele")), "Nexo : modèle recopié " + saphir.get("modele"));
         JsonObject ms = JsonParser.parseString(Files.readString(vorace.resolve("ressources/modeles/converti/nexo/minecraft/objets/saphir.json"))).getAsJsonObject();
-        verifier(!ms.has("parent") && ms.has("elements") && ms.getAsJsonObject("textures").get("0").getAsString().equals("converti/nexo/minecraft/objets/saphir")
-            && ms.getAsJsonObject("textures").get("particle").getAsString().equals("converti/nexo/minecraft/objets/rubis"), "Nexo : parent personnalisé fusionné, textures réécrites " + ms.get("textures"));
+        verifier("minecraft:block/block".equals(ms.get("parent").getAsString()) && ms.has("elements") && ms.getAsJsonObject("textures").get("0").getAsString().equals("converti/nexo/minecraft/objets/saphir")
+            && ms.getAsJsonObject("textures").get("particle").getAsString().equals("converti/nexo/minecraft/objets/rubis"), "Nexo : parent personnalisé fusionné (réglages d'affichage d'un bloc ajoutés), textures réécrites " + ms.get("textures"));
         Map<String, Object> cmd = m(saphir.get("commandes"));
         verifier(cmd != null && List.of("console: say %joueur% brandit un saphir").equals(cmd.get("clic-droit")) && Integer.valueOf(40).equals(cmd.get("delai-ticks")), "Nexo : commandes " + cmd);
 
