@@ -32,6 +32,8 @@ dependencies {
 java {
     // JDK 25 pour pouvoir lire l'API de Paper 26.x ; le code produit reste compatible Java 21 (release = 21)
     toolchain.languageVersion = JavaLanguageVersion.of(25)
+    // l'API 26.x se déclare « Java 25 » : on l'accepte quand même pour vérifier la compatibilité
+    disableAutoTargetJvm()
 }
 
 tasks.withType<JavaCompile>().configureEach {
