@@ -1,6 +1,8 @@
 package fr.vorace;
 
 import fr.vorace.envoi.Envoi;
+import fr.vorace.objets.DefinitionObjet;
+import fr.vorace.objets.MenuObjets;
 import fr.vorace.pack.Constructeur;
 import fr.vorace.pack.Journal;
 import fr.vorace.pack.Recherche;
@@ -60,6 +62,18 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return true; }
                 plugin.envoi().envoyer(p);
             }
+            case "give", "donner" -> donner(s, a);
+            case "objets", "items" -> {
+                if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return true; }
+                int page = 0;
+                try { if (a.length > 1) page = Integer.parseInt(a[1]) - 1; } catch (NumberFormatException ignore) { }
+                new MenuObjets(plugin, page).ouvrir(p);
+            }
+            case "maj" -> {
+                int n = 0;
+                for (Player p : Bukkit.getOnlinePlayers()) n += plugin.ecouteurObjets().mettreAJour(p);
+                s.sendMessage(Messages.brut("<green>" + n + " objet(s) mis à jour dans les inventaires."));
+            }
             case "info" -> info(s);
             case "sources" -> sources(s);
             default -> {
@@ -68,15 +82,36 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace envoyer [joueur|tous]</white> <gray>envoie le pack"));
                 s.sendMessage(Messages.brut("<white>/vorace info</white> <gray>état du pack et de l'hébergement"));
                 s.sendMessage(Messages.brut("<white>/vorace sources</white> <gray>packs trouvés et fusionnés"));
+                s.sendMessage(Messages.brut("<white>/vorace give <joueur> <objet> [quantité]</white> <gray>donne un objet"));
+                s.sendMessage(Messages.brut("<white>/vorace objets</white> <gray>menu de tous les objets"));
+                s.sendMessage(Messages.brut("<white>/vorace maj</white> <gray>met à jour les objets dans les inventaires"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
         }
         return true;
     }
 
+    private void donner(CommandSender s, String[] a) {
+        if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace give <joueur> <objet> [quantité]")); return; }
+        Player p = Bukkit.getPlayerExact(a[1]);
+        if (p == null) { s.sendMessage(Messages.brut("<red>Joueur introuvable : " + Messages.echapper(a[1]))); return; }
+        String id = a[2].toLowerCase(Locale.ROOT).replace("vorace:", "");
+        DefinitionObjet d = plugin.objets().definition(id);
+        if (d == null) { s.sendMessage(Messages.brut("<red>Objet inconnu : " + Messages.echapper(id))); return; }
+        int n = 1;
+        try { if (a.length > 3) n = Math.max(1, Math.min(6400, Integer.parseInt(a[3]))); } catch (NumberFormatException ignore) { }
+        int reste = n;
+        while (reste > 0) {
+            int lot = Math.min(64, reste);
+            MenuObjets.donner(p, plugin.objets().fabriquer(d, lot));
+            reste -= lot;
+        }
+        s.sendMessage(Messages.brut("<green>" + n + " × " + Messages.echapper(id) + " donné(s) à " + p.getName() + "."));
+    }
+
     private void info(CommandSender s) {
         Constructeur.Resultat r = plugin.packs().actuel();
-        s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion()));
+        s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion() + " <gray>- " + plugin.objets().toutes().size() + " objet(s)"));
         if (r == null) {
             s.sendMessage(Messages.brut("<yellow>Pack pas encore construit."));
         } else {
@@ -107,9 +142,14 @@ public final class Commande implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         List<String> r = new ArrayList<>();
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "envoyer", "info", "sources", "pack") : List.of("pack")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "envoyer", "maj", "info", "sources", "pack") : List.of("pack")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
+            Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));
+            r.removeIf(x -> !x.toLowerCase(Locale.ROOT).startsWith(a[1].toLowerCase(Locale.ROOT)));
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
+            for (DefinitionObjet d : plugin.objets().toutes()) if (d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

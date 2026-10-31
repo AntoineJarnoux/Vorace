@@ -50,12 +50,19 @@ public final class Surveillance {
         if (s == derniereSignature) { signatureVue = s; return; }
         if (s != signatureVue) { signatureVue = s; return; } // ça bouge encore, on attend un tour
         derniereSignature = s;
-        plugin.getLogger().info("Un pack source a changé : reconstruction automatique");
-        Bukkit.getScheduler().runTask(plugin, () -> plugin.reconstruire(null));
+        plugin.getLogger().info("Un pack source ou un objet a changé : reconstruction automatique");
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (plugin.objets() != null) plugin.objets().charger();
+            plugin.reconstruire(null);
+        });
     }
 
     long signature() {
-        List<Recherche.Trouve> sources = plugin.packs().chercherSources(plugin.reglages());
+        List<Recherche.Trouve> sources = new java.util.ArrayList<>(plugin.packs().chercherSources(plugin.reglages()));
+        if (plugin.objets() != null) {
+            sources.add(new Recherche.Trouve("objets", plugin.objets().dossierObjets(), Files.isDirectory(plugin.objets().dossierObjets())));
+            sources.add(new Recherche.Trouve("ressources", plugin.objets().dossierRessources(), Files.isDirectory(plugin.objets().dossierRessources())));
+        }
         long h = 17;
         for (Recherche.Trouve t : sources) {
             h = h * 31 + t.chemin().toString().hashCode();

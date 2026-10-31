@@ -1,6 +1,7 @@
 package fr.vorace;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.file.FileConfiguration;
 
@@ -43,6 +44,11 @@ public final class Messages {
     /** Texte libre (MiniMessage) précédé du préfixe. */
     public static Component brut(String miniMessage) {
         return MM.deserialize(textes.get("prefixe") + miniMessage);
+    }
+
+    /** Texte d'objet ou de menu : MiniMessage, sans l'italique que le jeu ajoute aux noms. */
+    public static Component objet(String miniMessage) {
+        return MM.deserialize(miniMessage).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
     }
 
     public static String echapper(String s) {

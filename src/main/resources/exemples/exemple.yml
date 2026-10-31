@@ -1,0 +1,63 @@
+# ============================================================
+#  Objets Vorace - exemples (tu peux modifier ou supprimer ce fichier)
+#  Un fichier peut contenir plusieurs objets. Les images vont dans
+#  plugins/Vorace/ressources/textures/ et les modèles 3D (export Blockbench
+#  « Java Block/Item », .json) dans plugins/Vorace/ressources/modeles/.
+#  Après une modification : /vorace reload (ou attends quelques secondes).
+#  Donner un objet : /vorace give <joueur> <objet> [quantité]   Menu : /vorace objets
+# ============================================================
+
+rubis:
+  materiau: PAPER                      # objet Minecraft de base (son comportement est gardé)
+  nom: "<gradient:#ff3355:#ff99aa>Rubis</gradient>"
+  description:
+    - "<gray>Une pierre précieuse rouge."
+  texture: exemple/rubis               # ressources/textures/exemple/rubis.png
+  taille-pile: 64
+
+epee_rubis:
+  materiau: DIAMOND_SWORD
+  nom: "<red><bold>Épée de rubis"
+  description:
+    - "<gray>Forgée avec des rubis."
+    - ""
+    - "<yellow>Clic droit : <white>bond en avant"
+  texture: exemple/epee_rubis          # modèle plat tenu comme une épée (en-main: true par défaut pour les épées)
+  enchantements:
+    sharpness: 3
+    fire_aspect: 1
+  incassable: true
+  cacher: [incassable]
+  attributs:
+    degats: 9                          # dégâts d'attaque (en main droite)
+    vitesse-attaque: -2.4
+  commandes:
+    clic-droit:
+      - "console: effect give %joueur% speed 3 2 true"
+    delai-ticks: 100                   # 5 secondes entre deux utilisations
+    message-delai: "<red>Encore %secondes% s avant de pouvoir bondir."
+  recette:
+    type: forme
+    forme:
+      - " R "
+      - " R "
+      - " B "
+    ingredients:
+      R: vorace:rubis                  # un objet Vorace comme ingrédient
+      B: STICK
+
+# Modèle 3D fait dans Blockbench (exemple à décommenter quand le fichier existe) :
+# couronne:
+#   materiau: PAPER
+#   nom: "<gold>Couronne"
+#   modele: couronne                   # ressources/modeles/couronne.json (+ ses textures dans ressources/textures/)
+#
+# Autres réglages possibles :
+#   brillance: true                    # effet enchanté sans enchantement (false pour l'enlever)
+#   couleur: "#3366ff"                 # armure en cuir, potion
+#   durabilite: 500                    # durabilité maximale
+#   custom-model-data: 1234            # numéro fixe (sinon Vorace en choisit un et le garde)
+#   cacher: [enchantements, attributs, incassable, teinture, infos]
+#   commandes: { clic-gauche: [...], consommer: true }   # consommer = retire l'objet après usage
+#   recette: { type: sans-forme, liste: [DIAMOND, vorace:rubis], quantite: 2 }
+#   recette: { type: four, entree: vorace:rubis, experience: 1.0, temps: 200 }

@@ -1,11 +1,14 @@
 package fr.vorace;
 
+import fr.vorace.api.VoraceAPI;
 import fr.vorace.envoi.Envoi;
 import fr.vorace.hebergement.Contenu;
 import fr.vorace.hebergement.Hebergeur;
 import fr.vorace.hebergement.HebergeurExterne;
 import fr.vorace.hebergement.HebergeurMemePort;
 import fr.vorace.hebergement.HebergeurPortDedie;
+import fr.vorace.objets.EcouteurObjets;
+import fr.vorace.objets.Objets;
 import fr.vorace.pack.Constructeur;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -34,12 +37,16 @@ public final class Vorace extends JavaPlugin {
     private Hebergeur hebergeur;
     private Envoi envoi;
     private Surveillance surveillance;
+    private Objets objets;
+    private EcouteurObjets ecouteurObjets;
     private volatile String testHebergement;
 
     public Reglages reglages() { return reglages; }
     public GestionPack packs() { return packs; }
     public Hebergeur hebergeur() { return hebergeur; }
     public Envoi envoi() { return envoi; }
+    public Objets objets() { return objets; }
+    public EcouteurObjets ecouteurObjets() { return ecouteurObjets; }
     public String testHebergement() { return testHebergement; }
 
     @Override
@@ -50,9 +57,15 @@ public final class Vorace extends JavaPlugin {
         Messages.charger(getConfig());
 
         packs = new GestionPack(this);
+        packs.preparerFormat(reglages);
+        objets = new Objets(this);
+        objets.charger();
+        VoraceAPI.initialiser(this);
         demarrerHebergement();
         envoi = new Envoi(this);
         Bukkit.getPluginManager().registerEvents(envoi, this);
+        ecouteurObjets = new EcouteurObjets(this);
+        Bukkit.getPluginManager().registerEvents(ecouteurObjets, this);
 
         PluginCommand cmd = getCommand("vorace");
         if (cmd != null) {
@@ -80,6 +93,7 @@ public final class Vorace extends JavaPlugin {
         Reglages ancien = reglages;
         reglages = Reglages.lire(getConfig());
         Messages.charger(getConfig());
+        objets.charger();
         if (!ancien.mode().equals(reglages.mode()) || ancien.portDedie() != reglages.portDedie()
             || !ancien.adressePublique().equals(reglages.adressePublique()) || ancien.portPublic() != reglages.portPublic()
             || !ancien.urlExterne().equals(reglages.urlExterne())) {

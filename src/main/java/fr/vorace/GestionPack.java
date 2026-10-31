@@ -44,6 +44,11 @@ public final class GestionPack {
     public List<Recherche.Trouve> dernieresSources() { return dernieresSources; }
     public FormatPack format() { return format; }
 
+    /** Détecte le format du pack tout de suite (les objets en ont besoin avant la première construction). */
+    public void preparerFormat(Reglages r) {
+        if (format == null) format = detecterFormat(r);
+    }
+
     public Path racineServeur() {
         return Path.of("").toAbsolutePath();
     }
@@ -96,6 +101,12 @@ public final class GestionPack {
             } catch (IOException | RuntimeException e) {
                 plugin.getLogger().warning("Pack illisible, ignoré : " + t.chemin() + " (" + e.getMessage() + ")");
             }
+        }
+        if (plugin.objets() != null) {
+            Journal journalObjets = new Journal();
+            java.util.Map<String, byte[]> objets = plugin.objets().fichiersPack(format, journalObjets);
+            if (!objets.isEmpty()) sources.add(Source.enMemoire("objets Vorace", objets));
+            journalObjets.lignes().forEach(l -> plugin.getLogger().warning(l.message()));
         }
         byte[] icone = null;
         if (r.icone() != null && !r.icone().isBlank()) {

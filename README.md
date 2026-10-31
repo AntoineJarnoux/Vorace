@@ -8,7 +8,9 @@ et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 >
 > Vorace est écrit de zéro. Il ne contient aucun code d'un autre plugin.
 
-## Ce que fait la version 0.1 (étape 1 : les packs)
+## Ce que fait Vorace
+
+### Packs de ressources (0.1)
 
 - **Fusionne tous les packs** du serveur en un seul : tes packs (dossiers ou .zip), celui de
   **ModelEngine**, celui de **MythicMobs**... Les fichiers partagés sont fusionnés intelligemment :
@@ -24,6 +26,40 @@ et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 - Écrit le bon `pack.mcmeta` pour la version du serveur (ancien format `pack_format` ou nouveau
   `min_format` / `max_format` depuis 1.21.9).
 - Écrit un **rapport** de chaque fusion : `plugins/Vorace/pack/genere/rapport.txt`.
+
+### Objets personnalisés (0.2)
+
+Les objets se décrivent dans `plugins/Vorace/objets/*.yml` (un fichier d'exemple est créé au premier démarrage) :
+
+```yaml
+epee_rubis:
+  materiau: DIAMOND_SWORD
+  nom: "<red><bold>Épée de rubis"
+  description: ["<gray>Forgée avec des rubis."]
+  texture: exemple/epee_rubis      # plugins/Vorace/ressources/textures/exemple/epee_rubis.png
+  # modele: couronne               # ou un modèle 3D Blockbench : ressources/modeles/couronne.json
+  enchantements: { sharpness: 3 }
+  attributs: { degats: 9, vitesse-attaque: -2.4 }
+  incassable: true
+  commandes:
+    clic-droit: ["console: effect give %joueur% speed 3 2"]
+    delai-ticks: 100
+  recette:
+    type: forme
+    forme: [" R ", " R ", " B "]
+    ingredients: { R: "vorace:rubis", B: STICK }
+```
+
+- **Apparence** : une image (modèle plat généré, tenu comme une épée pour les armes et outils) ou un
+  modèle 3D exporté de Blockbench (« Java Block/Item ») ; ses textures sont retrouvées et reliées toutes seules.
+  Vorace écrit le pack selon la version : `item_model` (1.21.2+) ou `custom_model_data` (1.21 / 1.21.1).
+- **Propriétés** : nom et description en MiniMessage, enchantements, brillance, incassable, attributs,
+  couleur (cuir, potions), taille de pile, durabilité, éléments cachés de l'infobulle.
+- **Actions** : commandes au clic droit ou gauche (console ou joueur), délai entre deux utilisations, objet consommé.
+- **Recettes** : avec forme, sans forme, ou au four ; les ingrédients peuvent être d'autres objets Vorace.
+- **Mise à jour** : quand tu modifies un objet, ceux déjà dans les inventaires sont mis à jour à la connexion.
+- `/vorace give <joueur> <objet> [quantité]`, `/vorace objets` (menu de tous les objets), `/vorace maj`.
+- API : `VoraceAPI.objet("epee_rubis", 1)`, `VoraceAPI.id(itemStack)`.
 
 ## Installation
 
@@ -43,6 +79,9 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace envoyer [joueur\|tous]` | envoie le pack |
 | `/vorace info` | état du pack, de l'hébergement, et ton adresse de téléchargement |
 | `/vorace sources` | packs trouvés, dans l'ordre de fusion |
+| `/vorace give <joueur> <objet> [quantité]` | donne un objet Vorace |
+| `/vorace objets` | menu de tous les objets (clic = 1, Maj + clic = une pile) |
+| `/vorace maj` | met à jour les objets Vorace dans les inventaires des joueurs connectés |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
 Permissions : `vorace.admin` (op par défaut), `vorace.pack` (tout le monde).
@@ -92,7 +131,7 @@ La compilation automatique sur GitHub vérifie aussi 1.21.4, 1.21.11 et 26.2.
 ## Feuille de route
 
 1. ✅ Packs : fusion, hébergement, envoi
-2. Objets personnalisés (fichiers YAML : texture ou modèle 3D, nom, description, enchantements, commandes `/vorace give`)
+2. ✅ Objets personnalisés (texture ou modèle 3D, propriétés, actions au clic, recettes)
 3. Meubles (modèles 3D posables, avec hitbox, sièges, lumières)
 4. Blocs personnalisés (minerais, décorations, avec outils et drops)
 5. Glyphes et emojis (chat, menus, scoreboard, titres), fonds de menus personnalisés

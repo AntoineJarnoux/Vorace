@@ -56,8 +56,13 @@ hebergement:
   # Pour le mode externe. {sha1} est remplacé par l'empreinte du pack.
   url-externe: ""
 
+objets:
+  # Les objets sont décrits dans plugins/Vorace/objets/*.yml (voir exemple.yml).
+  # Quand tu modifies un objet, ceux déjà dans les inventaires sont mis à jour à la connexion.
+  mise-a-jour-auto: true
+
 surveillance:
-  # Reconstruit le pack tout seul quand un pack source change (par exemple après /meg reload).
+  # Reconstruit le pack tout seul quand un pack source ou un objet change (par exemple après /meg reload).
   actif: true
   intervalle-secondes: 5
 
