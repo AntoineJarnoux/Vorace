@@ -57,6 +57,12 @@ public final class Glyphes {
         this.plugin = plugin;
     }
 
+    /** « fichier » des glyphes fournis par Vorace (fonds de ses menus). */
+    public static final String INTEGRE = "(intégré à Vorace)";
+
+    /** Glyphe fourni par Vorace lui-même (caché des listes). */
+    public static boolean integre(Glyphe g) { return INTEGRE.equals(g.def().fichier()); }
+
     public Path dossier() { return plugin.getDataFolder().toPath().resolve("glyphes"); }
     private Path ressources() { return plugin.getDataFolder().toPath().resolve("ressources"); }
     public Collection<Glyphe> tous() { return glyphes.values(); }
@@ -89,6 +95,18 @@ public final class Glyphes {
             }
         }
 
+        // fonds des menus de Vorace, dessinés par le plugin (un fichier peut les remplacer avec le même nom)
+        try {
+            fr.vorace.interfaces.FondsMenus.installer(ressources().resolve("textures"));
+            for (int n = 1; n <= 6; n++) {
+                String id = fr.vorace.interfaces.FondsMenus.id(n);
+                lues.putIfAbsent(id, new DefinitionGlyphe(id, INTEGRE, fr.vorace.interfaces.FondsMenus.texture(n), -1, 13,
+                    List.of(), null, true, false, n));
+            }
+        } catch (IOException | RuntimeException e) {
+            problemes.add("fonds des menus de Vorace non créés : " + e.getMessage());
+        }
+
         attribuerCodes(lues.keySet(), problemes);
         Map<String, Glyphe> resultat = new LinkedHashMap<>();
         Map<String, Glyphe> raccourcis = new HashMap<>();
@@ -118,7 +136,7 @@ public final class Glyphes {
         motif = tri.isEmpty() ? null : Pattern.compile(String.join("|", tri.stream().map(Pattern::quote).toList()));
         Messages.resolveur(resolveur());
         problemes.forEach(m -> plugin.getLogger().warning("Glyphes : " + m));
-        plugin.getLogger().info(resultat.size() + " glyphe(s) chargé(s)");
+        plugin.getLogger().info(resultat.values().stream().filter(g -> !integre(g)).count() + " glyphe(s) chargé(s) (+ les fonds des menus de Vorace)");
         if (Bukkit.isPrimaryThread()) for (Player p : Bukkit.getOnlinePlayers()) mettreAJourSuggestions(p);
     }
 

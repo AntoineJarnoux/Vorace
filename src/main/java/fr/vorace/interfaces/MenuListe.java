@@ -27,17 +27,17 @@ public final class MenuListe {
                                  Function<Integer, Menu> fabrique, Supplier<Menu> parent, String vide) {
         int pages = Math.max(1, (elements.size() + PAR_PAGE - 1) / PAR_PAGE);
         int pg = Math.max(0, Math.min(page, pages - 1));
-        Menu m = new Menu(titre + (pages > 1 ? " <gray>(" + (pg + 1) + "/" + pages + ")" : ""), 6);
+        Menu m = new Menu(titre + (pages > 1 ? " (" + (pg + 1) + "/" + pages + ")" : ""), 6);
         for (int i = 0; i < PAR_PAGE; i++) {
             int index = pg * PAR_PAGE + i;
             if (index >= elements.size()) break;
             T el = elements.get(index);
             m.bouton(i, icone.apply(el), action == null ? null : (p, d, maj) -> action.clic(p, el, d, maj));
         }
-        if (elements.isEmpty() && vide != null) m.bouton(22, Menu.icone("BARRIER", "<gray>Rien ici", vide), null);
-        if (pg > 0) m.bouton(m.bas() + 3, Menu.icone("ARROW", "<yellow>« Page précédente"), (p, d, maj) -> fabrique.apply(pg - 1).ouvrir(p));
-        if (pg < pages - 1) m.bouton(m.bas() + 5, Menu.icone("ARROW", "<yellow>Page suivante »"), (p, d, maj) -> fabrique.apply(pg + 1).ouvrir(p));
-        m.bouton(m.bas() + 4, Menu.icone("BOOK", "<white>" + elements.size() + " élément(s)"), null);
+        if (elements.isEmpty() && vide != null) m.bouton(22, Menu.icone("BARRIER", Menu.nom("Rien ici"), vide), null);
+        if (pg > 0) m.bouton(m.bas() + 3, Menu.icone("ARROW", Menu.ROSE + "« Page précédente"), (p, d, maj) -> fabrique.apply(pg - 1).ouvrir(p));
+        if (pg < pages - 1) m.bouton(m.bas() + 5, Menu.icone("ARROW", Menu.ROSE + "Page suivante »"), (p, d, maj) -> fabrique.apply(pg + 1).ouvrir(p));
+        m.bouton(m.bas() + 4, Menu.icone("BOOK", Menu.nom(elements.size() + " élément(s)"), "Page " + (pg + 1) + " sur " + pages), null);
         return m;
     }
 }

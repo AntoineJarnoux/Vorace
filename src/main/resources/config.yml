@@ -74,6 +74,11 @@ glyphes:
   chat: true
   panneaux: true
 
+menus:
+  # Menus de /vorace : fond dessiné aux couleurs de Vorace (dans le pack de ressources).
+  # false = coffres normaux du jeu, avec des vitres violettes et roses.
+  fond-dessine: true
+
 modeles:
   # Modèles animés (plugins/Vorace/modeles-animes/*.bbmodel) : nombre de tics entre deux images de l'animation.
   # 1 = le plus fluide, 2 = deux fois moins de données envoyées aux joueurs (le jeu adoucit entre les images).

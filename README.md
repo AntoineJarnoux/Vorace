@@ -11,8 +11,9 @@ et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 ## Ce que fait Vorace
 
 **Tape `/vorace` : tout se fait avec des menus.** Objets, meubles, blocs, glyphes, modèles animés, pack, conversion
-et outils avancés : chaque bouton explique ce que fait chaque clic. Les commandes ci-dessous restent disponibles
-(`/vorace aide`).
+et outils avancés : chaque bouton explique ce que fait chaque clic. Les menus ont un fond dessiné aux couleurs de
+Vorace (dégradé violet → rose), ajouté tout seul au pack (`menus.fond-dessine: false` pour des coffres normaux).
+Les commandes ci-dessous restent disponibles (`/vorace aide`).
 
 ### Packs de ressources (0.1)
 

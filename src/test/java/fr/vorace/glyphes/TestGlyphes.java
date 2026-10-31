@@ -61,6 +61,29 @@ public final class TestGlyphes {
         verifier(GenerateurGlyphes.avance(r.resolve("textures/exemple/glyphes/coeur.png"), 18) == 19, "image agrandie : 18 + 1");
         verifier(GenerateurGlyphes.avance(r.resolve("rien.png"), 9) == 0 && GenerateurGlyphes.taille(r.resolve("rien.png")) == null, "image absente");
 
+        // fonds des menus de Vorace : taille du coffre, cases opaques, coins arrondis, avance exacte
+        Path tx = Files.createTempDirectory("vorace-fonds");
+        fr.vorace.interfaces.FondsMenus.installer(tx);
+        boolean tailles = true, opaque = true, coins = true, avance = true;
+        for (int n = 1; n <= 6; n++) {
+            Path png = tx.resolve(fr.vorace.interfaces.FondsMenus.texture(n) + ".png");
+            int[] tf = GenerateurGlyphes.taille(png);
+            if (tf == null || tf[0] != 176 || tf[1] != 114 + n * 18) tailles = false;
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(png.toFile());
+            for (int y = 3; y < img.getHeight() - 3; y++) for (int x = 3; x < 173; x++) if ((img.getRGB(x, y) >>> 24) != 255) opaque = false;
+            if ((img.getRGB(0, 0) >>> 24) != 0 || (img.getRGB(175, img.getHeight() - 1) >>> 24) != 0) coins = false;
+            if (GenerateurGlyphes.avance(png, tf == null ? 0 : tf[1]) != 177) avance = false;
+        }
+        verifier(tailles, "fonds des menus : 176 × (114 + lignes × 18)");
+        verifier(opaque, "fonds des menus : opaques (le coffre du jeu ne se voit pas)");
+        verifier(coins, "fonds des menus : coins arrondis transparents");
+        verifier(avance, "fonds des menus : avance 177 (titre replacé à x = 8)");
+        long avantDate = Files.getLastModifiedTime(tx.resolve(fr.vorace.interfaces.FondsMenus.texture(3) + ".png")).toMillis();
+        Thread.sleep(20);
+        fr.vorace.interfaces.FondsMenus.installer(tx);
+        verifier(Files.getLastModifiedTime(tx.resolve(fr.vorace.interfaces.FondsMenus.texture(3) + ".png")).toMillis() == avantDate,
+            "fonds des menus : pas réécrits s'ils n'ont pas changé");
+
         System.out.println(echecs == 0 ? "TOUS LES TESTS PASSENT" : echecs + " ECHEC(S)");
         System.exit(echecs == 0 ? 0 : 1);
     }

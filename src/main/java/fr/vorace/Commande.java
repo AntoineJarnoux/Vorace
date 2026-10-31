@@ -330,6 +330,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             return;
         }
         List<Glyphes.Glyphe> tous = new ArrayList<>(plugin.glyphes().tous());
+        tous.removeIf(Glyphes::integre);
         s.sendMessage(Messages.brut("<gray>" + tous.size() + " glyphe(s) :"));
         for (Glyphes.Glyphe g : tous) {
             Component l = Component.text(" ").append(Glyphes.composant(g)).append(Component.text(" " + g.def().id(), NamedTextColor.WHITE))

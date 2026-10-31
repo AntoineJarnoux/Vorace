@@ -30,13 +30,61 @@ public class Menu implements InventoryHolder {
         void clic(Player p, boolean droit, boolean maj);
     }
 
+    // ------------------------------------------------------------------ couleurs de Vorace
+
+    /** Le dégradé de Vorace (violet → rose), celui du nom du plugin. */
+    public static final String DEGRADE = "<gradient:#7b2ff7:#f107a3>";
+    /** Version claire du dégradé, lisible sur le fond sombre des descriptions. */
+    public static final String DEGRADE_CLAIR = "<gradient:#b77bff:#ff6fcf>";
+    /** Texte des descriptions : lavande douce. */
+    public static final String TEXTE = "<#cdb9ec>";
+    /** Texte discret (identifiants, remarques). */
+    public static final String DISCRET = "<#8a76a6>";
+    /** Nom d'un bouton secondaire. */
+    public static final String NOM = "<#eadcff>";
+    /** Accent rose. */
+    public static final String ROSE = "<#ff7ad6>";
+    /** Actif / réussi. */
+    public static final String ACTIF = "<#7dffb4>";
+    /** Danger (retirer, fermer). */
+    public static final String DANGER = "<#ff5f7e>";
+
+    /**
+     * Habille le titre avec le fond dessiné (lignes, titre) → titre complet, ou null sans fond
+     * (fond désactivé dans la config, ou glyphes pas encore chargés).
+     */
+    static volatile java.util.function.BiFunction<Integer, Component, Component> habillage;
+
     private final Inventory inventaire;
     private final Map<Integer, Action> actions = new HashMap<>();
     final int lignes;
+    /** Vrai si le menu a le fond dessiné de Vorace (pas de vitres dans les cases vides). */
+    final boolean fond;
 
     public Menu(String titre, int lignes) {
         this.lignes = Math.max(1, Math.min(6, lignes));
-        this.inventaire = Bukkit.createInventory(this, this.lignes * 9, Messages.objet(titre));
+        Component t = null;
+        java.util.function.BiFunction<Integer, Component, Component> h = habillage;
+        if (h != null) {
+            try {
+                t = h.apply(this.lignes, Messages.objet("<white>" + titre));
+            } catch (RuntimeException e) {
+                t = null;
+            }
+        }
+        this.fond = t != null;
+        if (t == null) t = Messages.objet(DEGRADE + titre + "</gradient>");
+        this.inventaire = Bukkit.createInventory(this, this.lignes * 9, t);
+    }
+
+    /** Nom d'un bouton principal : en gras, au dégradé de Vorace. */
+    public static String titre(String texte) {
+        return DEGRADE_CLAIR + "<bold>" + texte + "</bold></gradient>";
+    }
+
+    /** Nom d'un bouton secondaire. */
+    public static String nom(String texte) {
+        return NOM + texte;
     }
 
     @Override
@@ -101,7 +149,7 @@ public class Menu implements InventoryHolder {
         if (meta == null) return it;
         if (nom != null) meta.displayName(Messages.objet(nom));
         List<Component> lore = new ArrayList<>();
-        for (String l : lignes) lore.add(Messages.objet(l.isEmpty() ? " " : "<gray>" + l));
+        for (String l : lignes) lore.add(Messages.objet(l.isEmpty() ? " " : TEXTE + l));
         if (!lore.isEmpty()) meta.lore(lore);
         meta.addItemFlags(ItemFlag.values());
         it.setItemMeta(meta);
@@ -116,7 +164,7 @@ public class Menu implements InventoryHolder {
 
     /** Ligne de description d'un clic : « ▶ Clic : poser ». */
     public static String clic(String quoi, String effet) {
-        return "<yellow>▶ " + quoi + " : <white>" + effet;
+        return ROSE + "▶ " + quoi + " " + DISCRET + "» <white>" + effet;
     }
 
     static String id(String s) {
