@@ -222,6 +222,11 @@ public final class Blocs {
         float progres;
         int dernierEnvoi = -1;
         int tics;
+        /**
+         * Identifiant de la fissure. Pas celui du joueur : son jeu efface chaque tic la fissure qui porte son
+         * identifiant (son propre minage reste à zéro), ce qui faisait clignoter l'animation.
+         */
+        final int fissure = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, -1);
 
         Minage(Player joueur, Block bloc, DefinitionObjet def) {
             this.joueur = joueur;
@@ -277,7 +282,7 @@ public final class Blocs {
     private void envoyerFissure(Minage m, float progres) {
         Location l = m.bloc.getLocation();
         for (Player x : m.bloc.getWorld().getPlayers()) {
-            if (x.getLocation().distanceSquared(l) < 32 * 32) x.sendBlockDamage(l, Math.max(0f, progres), m.joueur.getEntityId());
+            if (x.getLocation().distanceSquared(l) < 32 * 32) x.sendBlockDamage(l, Math.min(1f, Math.max(0f, progres)), m.fissure);
         }
     }
 
