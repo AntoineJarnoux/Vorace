@@ -1,8 +1,9 @@
 # Vorace
 
 Plugin **libre et gratuit** pour serveurs Paper (Minecraft **1.21 à 26.x**) : packs de ressources,
-objets, meubles, blocs et glyphes personnalisés. Le but est de pouvoir tout faire sans plugin payant,
-et de corriger ou améliorer le plugin au fur et à mesure des besoins.
+objets, meubles, blocs et glyphes personnalisés, modèles 3D animés, couche paquets et conversion depuis
+Nexo, Oraxen, ItemsAdder et ModelEngine. Tout se règle avec des menus (`/vorace`). Le but est de pouvoir
+tout faire sans plugin payant, et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 
 > **Code écrit par une IA.** Vorace est développé par Claude (l'IA d'Anthropic), à la demande et sous la direction de ORA, qui teste et décide de ce qui est ajouté. Le code est ouvert pour que chacun puisse le relire, le corriger et l'améliorer.
 >
@@ -303,7 +304,7 @@ Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaq
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.9.0") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-1.0.0") }
 ```
 
 Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`
@@ -338,6 +339,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 6. ✅ Modèles animés : import direct des .bbmodel, animations, sur des entités
 7. ✅ Couche paquets (rôle de ProtocolLib), modèles visibles par un seul joueur, API commune et dépendance Maven
 8. ✅ Conversion automatique des configurations Nexo, Oraxen, ItemsAdder et ModelEngine
+9. ✅ **1.0** : tout se fait avec des menus (`/vorace`), aux couleurs de Vorace
 
 ## Licence
 
