@@ -39,3 +39,30 @@ jobs:
           find fr -name '*.class' | sort | xargs javap -c -p | grep -oE '(invoke[a-z]+|[gp]et(static|field)|checkcast|instanceof|new) +#[0-9]+(, *[0-9]+)? +// .*(org/bukkit|io/papermc|net/kyori|io/netty|com/google|net/md_5|org/joml)[^ ]*' | sed -E 's/#[0-9]+(, *[0-9]+)? +\/\/ //' | sort -u > ../appels-api.txt
           echo "APPELS $(wc -l < ../appels-api.txt) $(sha256sum ../appels-api.txt | cut -c1-16)"
           cat ../appels-api.txt
+
+  # essai sur un vrai serveur Paper : le golem d'exemple doit s'animer (vu par un faux joueur)
+  essai-serveur:
+    needs: compiler
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        paper: ["1.21.4"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: Vorace
+          path: jar
+      - name: Faux joueur
+        run: cd outils && npm init -y > /dev/null && npm install --no-audit --no-fund mineflayer
+      - name: Essai des modèles animés
+        run: outils/essai-serveur.sh "${{ matrix.paper }}" jar

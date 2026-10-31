@@ -55,6 +55,9 @@ public final class Modeles {
     private final Map<UUID, Instance> instances = new LinkedHashMap<>();
     private BukkitTask tache;
     private long tic;
+    /** Dernière erreur du calcul des animations (affichée par /vorace modele info). */
+    private volatile String derniereErreur;
+    private boolean erreurJournalisee;
 
     public Modeles(Vorace plugin) {
         this.plugin = plugin;
@@ -67,6 +70,9 @@ public final class Modeles {
     public Collection<ModeleBB> tous() { return modeles.values(); }
     public ModeleBB modele(String id) { return id == null ? null : modeles.get(id.toLowerCase(Locale.ROOT)); }
     public Collection<Instance> instances() { return instances.values(); }
+    public long tics() { return tic; }
+    public boolean actif() { return tache != null && !tache.isCancelled(); }
+    public String derniereErreur() { return derniereErreur; }
 
     // ------------------------------------------------------------------ chargement
 
@@ -222,17 +228,25 @@ public final class Modeles {
 
     private void tic() {
         tic++;
-        int intervalle = Math.max(1, Math.min(5, plugin.getConfig().getInt("modeles.intervalle-tics", 2)));
+        int intervalle;
+        try {
+            intervalle = Math.max(1, Math.min(5, plugin.getConfig().getInt("modeles.intervalle-tics", 2)));
+        } catch (Throwable t) {
+            intervalle = 2;
+        }
         for (Instance i : new ArrayList<>(instances.values())) {
             try {
                 if (!i.mettreAJour(intervalle)) {
                     i.supprimerParties();
                     instances.remove(i.base.getUniqueId());
                 }
-            } catch (RuntimeException ex) {
-                plugin.getLogger().warning("Modèle " + i.modele.id() + " : " + ex);
-                i.supprimerParties();
-                instances.remove(i.base.getUniqueId());
+            } catch (Throwable ex) {
+                // une erreur (même de type Error) ne doit jamais figer tous les modèles : on la note une fois et on continue
+                derniereErreur = i.modele.id() + " : " + ex;
+                if (!erreurJournalisee) {
+                    erreurJournalisee = true;
+                    plugin.getLogger().log(java.util.logging.Level.WARNING, "Animation du modèle " + i.modele.id() + " impossible", ex);
+                }
             }
         }
     }
@@ -267,6 +281,32 @@ public final class Modeles {
         public Entity base() { return base; }
         public boolean surMob() { return mob; }
         public String animation() { return forcee != null ? forcee : auto; }
+        public int partiesValides() {
+            int n = 0;
+            for (ItemDisplay d : parties) if (d != null && d.isValid()) n++;
+            return n;
+        }
+
+        /** Résumé de l'état réel des entités d'affichage (pour /vorace modele info). */
+        public String etat() {
+            double somme = 0;
+            int n = 0;
+            for (ItemDisplay d : parties) {
+                if (d == null || !d.isValid()) continue;
+                Transformation tr = d.getTransformation();
+                Vector3f v = tr.getTranslation();
+                Quaternionf q = tr.getLeftRotation();
+                somme += v.x * 1.3 + v.y * 1.7 + v.z * 1.9 + q.x * 2.3 + q.y * 2.9 + q.z * 3.1 + q.w * 3.7;
+                n++;
+                if (n == 1) {
+                    somme += d.getInterpolationDuration() * 1000;
+                }
+            }
+            long tAnim = forcee != null ? tic - debutForcee : tic - debutAuto;
+            return "animation=" + animation() + (forcee != null ? " (demandée" + (forceeBoucle ? ", en boucle" : "") + ")" : " (auto)")
+                + " t=" + String.format(Locale.ROOT, "%.2f", tAnim / 20.0) + "s parties=" + n + "/" + modele.parties().stream().filter(ModeleBB.Partie::visible).count()
+                + " empreinte=" + String.format(Locale.ROOT, "%.4f", somme);
+        }
 
         void reconstruire() {
             supprimerParties();

@@ -108,7 +108,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace meuble [liste|poser|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
                 s.sendMessage(Messages.brut("<white>/vorace bloc [liste|poser|casser|info]</white> <gray>blocs personnalisés"));
                 s.sendMessage(Messages.brut("<white>/vorace glyphe [liste|menu <fond>]</white> <gray>glyphes et fonds de menus"));
-                s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|sur|invoquer|retirer]</white> <gray>modèles animés"));
+                s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|info|sur|invoquer|retirer]</white> <gray>modèles animés"));
                 s.sendMessage(Messages.brut("<white>/emojis</white> <gray>(joueurs) liste des emojis du chat"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
@@ -269,24 +269,33 @@ public final class Commande implements CommandExecutor, TabCompleter {
         if (m == null) { s.sendMessage(Messages.brut("<red>Les modèles animés n'ont pas pu démarrer (voir la console).")); return; }
         String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
         Player p = s instanceof Player j ? j : null;
-        if (!act.equals("liste") && p == null) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+        // depuis la console : autour du point d'apparition du monde principal (essais automatiques, serveurs sans joueur)
+        org.bukkit.Location ici = p != null ? p.getLocation() : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
+        if (p == null && List.of("sur", "invoquer").contains(act)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
         switch (act) {
             case "poser" -> {
                 if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace modele poser <modèle> [animation]")); return; }
                 ModeleBB def = m.modele(a[2]);
                 if (def == null) { s.sendMessage(Messages.brut("<red>Modèle inconnu : " + Messages.echapper(a[2]))); return; }
-                Block cible = p.getTargetBlockExact(8);
-                BlockFace face = p.getTargetBlockFace(8);
-                if (cible == null || face == null) { s.sendMessage(Messages.brut("<red>Regarde un bloc à moins de 8 blocs.")); return; }
-                org.bukkit.Location ou = cible.getRelative(face).getLocation().add(0.5, 0, 0.5);
-                if (face != BlockFace.UP) ou = cible.getLocation().add(0.5, 1, 0.5);
-                Modeles.Instance i = m.poser(def.id(), ou, p.getLocation().getYaw() + 180f, a.length > 3 ? a[3] : null);
+                org.bukkit.Location ou;
+                float yaw = 0;
+                if (p != null) {
+                    Block cible = p.getTargetBlockExact(8);
+                    BlockFace face = p.getTargetBlockFace(8);
+                    if (cible == null || face == null) { s.sendMessage(Messages.brut("<red>Regarde un bloc à moins de 8 blocs.")); return; }
+                    ou = cible.getRelative(face).getLocation().add(0.5, 0, 0.5);
+                    if (face != BlockFace.UP) ou = cible.getLocation().add(0.5, 1, 0.5);
+                    yaw = p.getLocation().getYaw() + 180f;
+                } else {
+                    ou = new org.bukkit.Location(ici.getWorld(), ici.getBlockX() + 0.5, ici.getBlockY(), ici.getBlockZ() + 2.5);
+                }
+                Modeles.Instance i = m.poser(def.id(), ou, yaw, a.length > 3 ? a[3] : null);
                 s.sendMessage(Messages.brut(i == null ? "<red>Impossible de poser ce modèle." : "<green>Modèle " + Messages.echapper(def.id()) + " posé. <gray>Animations : <white>"
                     + Messages.echapper(String.join(", ", def.animations().keySet()))));
             }
             case "anim", "animation", "jouer" -> {
                 if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace modele anim <animation> [boucle]  (sur le modèle le plus proche)")); return; }
-                Modeles.Instance i = m.plusProche(p.getLocation(), 16);
+                Modeles.Instance i = m.plusProche(ici, 16);
                 if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
                 boolean boucle = a.length > 3 && a[3].toLowerCase(Locale.ROOT).startsWith("b");
                 if (!i.jouer(a[2], boucle)) {
@@ -296,8 +305,15 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 }
                 s.sendMessage(Messages.brut("<green>Animation " + Messages.echapper(a[2]) + (boucle ? " en boucle." : ".")));
             }
+            case "info" -> {
+                s.sendMessage(Messages.brut("<gray>Animations : <white>" + (m.actif() ? "actives" : "ARRÊTÉES") + "</white>, tic " + m.tics() + ", "
+                    + m.instances().size() + " modèle(s) en jeu" + (m.derniereErreur() == null ? "" : ", dernière erreur : <red>" + Messages.echapper(m.derniereErreur()))));
+                Modeles.Instance i = m.plusProche(ici, 16);
+                if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
+                s.sendMessage(Messages.brut("<gray>" + Messages.echapper(i.modele().id()) + " : <white>" + Messages.echapper(i.etat())));
+            }
             case "stop" -> {
-                Modeles.Instance i = m.plusProche(p.getLocation(), 16);
+                Modeles.Instance i = m.plusProche(ici, 16);
                 if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
                 i.arreterAnimation();
                 s.sendMessage(Messages.brut("<green>Retour aux animations automatiques."));
@@ -330,7 +346,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "retirer" -> {
                 double rayon = 8;
                 try { if (a.length > 2) rayon = Double.parseDouble(a[2]); } catch (NumberFormatException ignore) { }
-                Modeles.Instance i = m.plusProche(p.getLocation(), rayon);
+                Modeles.Instance i = m.plusProche(ici, rayon);
                 if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de " + (int) rayon + " blocs.")); return; }
                 m.retirer(i);
                 s.sendMessage(Messages.brut("<green>Modèle retiré" + (i.surMob() ? " (le mob est redevenu visible)." : ".")));
@@ -341,7 +357,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                     + (def.animations().isEmpty() ? "aucune" : String.join(", ", def.animations().keySet())) + ")");
                 s.sendMessage(Messages.brut("<gray>" + l.size() + " modèle(s) animé(s), " + m.instances().size() + " en jeu :"));
                 for (String x : l) s.sendMessage(Messages.brut("<white> " + Messages.echapper(x)));
-                s.sendMessage(Messages.brut("<gray>/vorace modele poser <modèle> [animation] | anim <animation> [boucle] | stop | sur <modèle> | invoquer <modèle> [mob] | retirer"));
+                s.sendMessage(Messages.brut("<gray>/vorace modele poser <modèle> [animation] | anim <animation> [boucle] | stop | info | sur <modèle> | invoquer <modèle> [mob] | retirer"));
             }
         }
     }
@@ -405,7 +421,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         } else if (a.length == 3 && a[0].equalsIgnoreCase("glyphe") && a[1].equalsIgnoreCase("menu") && s.hasPermission("vorace.admin")) {
             for (Glyphes.Glyphe g : plugin.glyphes().tous()) if (g.def().menu() && g.def().id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(g.def().id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("modele") && s.hasPermission("vorace.admin")) {
-            for (String o : List.of("liste", "poser", "anim", "stop", "sur", "invoquer", "retirer")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+            for (String o : List.of("liste", "poser", "anim", "stop", "info", "sur", "invoquer", "retirer")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 3 && a[0].equalsIgnoreCase("modele") && List.of("poser", "sur", "invoquer").contains(a[1].toLowerCase(Locale.ROOT))
             && s.hasPermission("vorace.admin") && plugin.modeles() != null) {
             for (ModeleBB def : plugin.modeles().tous()) if (def.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(def.id());

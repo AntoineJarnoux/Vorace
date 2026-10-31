@@ -5,3 +5,7 @@ out/
 *.iml
 .vscode/
 run/
+outils/node_modules/
+outils/package.json
+outils/package-lock.json
+essai-serveur/
