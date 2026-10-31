@@ -37,12 +37,18 @@ java {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.release = 21
+    options.compilerArgs.add("-Xlint:deprecation")
 }
 
 tasks.processResources {
     val v = project.version.toString()
     inputs.property("version", v)
     filesMatching("plugin.yml") { expand("version" to v) }
+}
+
+// Les tests sont des programmes simples lancés par la tâche "tests" (pas JUnit)
+tasks.test {
+    enabled = false
 }
 
 tasks.jar {

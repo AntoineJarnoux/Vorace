@@ -63,7 +63,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "info" -> info(s);
             case "sources" -> sources(s);
             default -> {
-                s.sendMessage(Messages.brut("<white>Vorace " + plugin.getDescription().getVersion() + "</white> <gray>- commandes :"));
+                s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion() + "</white> <gray>- commandes :"));
                 s.sendMessage(Messages.brut("<white>/vorace reload</white> <gray>recharge la config et reconstruit le pack"));
                 s.sendMessage(Messages.brut("<white>/vorace envoyer [joueur|tous]</white> <gray>envoie le pack"));
                 s.sendMessage(Messages.brut("<white>/vorace info</white> <gray>état du pack et de l'hébergement"));
@@ -76,7 +76,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
 
     private void info(CommandSender s) {
         Constructeur.Resultat r = plugin.packs().actuel();
-        s.sendMessage(Messages.brut("<white>Vorace " + plugin.getDescription().getVersion()));
+        s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion()));
         if (r == null) {
             s.sendMessage(Messages.brut("<yellow>Pack pas encore construit."));
         } else {
