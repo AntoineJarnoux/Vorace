@@ -236,7 +236,7 @@ public final class Glyphes {
                 Component c = composant(id);
                 return Tag.selfClosingInserting(c != null ? c : Component.text("[" + id + "?]", NamedTextColor.RED));
             }),
-            TagResolver.resolver(Set.of("decalage", "décalage", "shift"), (args, ctx) -> {
+            TagResolver.resolver(Set.of("decalage", "shift"), (args, ctx) -> {
                 int n = 0;
                 try { if (args.hasNext()) n = Integer.parseInt(args.pop().value().trim()); } catch (NumberFormatException ignore) { }
                 return Tag.selfClosingInserting(Component.text(GenerateurGlyphes.decalage(n)));

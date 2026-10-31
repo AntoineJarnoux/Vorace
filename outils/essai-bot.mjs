@@ -3,14 +3,20 @@
 import mineflayer from 'mineflayer';
 
 const duree = Number(process.argv[2] || 40) * 1000;
-const bot = mineflayer.createBot({ host: '127.0.0.1', port: 25565, username: 'Testeur', auth: 'offline' });
+const version = process.argv[3] || false; // version du faux joueur (plus récente que le serveur = passage par ViaVersion)
+const bot = mineflayer.createBot({ host: '127.0.0.1', port: 25565, username: 'Testeur', auth: 'offline', version });
 const affichages = new Map(); // id d'entité -> { paquets, valeurs: Set }
 let typeItemDisplay = null;
+let clesUtiles = null; // index des données translation, échelle, rotations (ils changent selon la version)
 let debut = 0;
 const chronologie = [];
 
 bot._client.on('spawn_entity', (p) => {
-  if (typeItemDisplay === null && bot.registry) typeItemDisplay = bot.registry.entitiesByName.item_display?.id ?? -1;
+  if (typeItemDisplay === null && bot.registry) {
+    const e = bot.registry.entitiesByName.item_display;
+    typeItemDisplay = e?.id ?? -1;
+    clesUtiles = ['translation', 'scale', 'left_rotation', 'right_rotation'].map((n) => e?.metadataKeys?.indexOf(n) ?? -1);
+  }
   if (p.type === typeItemDisplay) affichages.set(p.entityId, { paquets: 0, valeurs: new Set() });
 });
 bot._client.on('entity_destroy', (p) => {
@@ -20,8 +26,7 @@ bot._client.on('entity_metadata', (p) => {
   const a = affichages.get(p.entityId);
   if (!a) return;
   a.paquets++;
-  // index des données d'une entité d'affichage : 11 = translation, 12 = échelle, 13 = rotation gauche
-  const utiles = (p.metadata || []).filter((m) => m.key >= 11 && m.key <= 14);
+  const utiles = (p.metadata || []).filter((m) => clesUtiles.includes(m.key));
   if (utiles.length) {
     a.valeurs.add(JSON.stringify(utiles.map((m) => [m.key, m.value])));
     chronologie.push(((Date.now() - debut) / 1000).toFixed(1));

@@ -48,7 +48,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        paper: ["1.21.4"]
+        include:
+          - paper: "1.21.4"
+            client: ""
+          - paper: "1.21.4"
+            client: "26.1"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -65,4 +69,4 @@ jobs:
       - name: Faux joueur
         run: cd outils && npm init -y > /dev/null && npm install --no-audit --no-fund mineflayer
       - name: Essai des modèles animés
-        run: outils/essai-serveur.sh "${{ matrix.paper }}" jar
+        run: outils/essai-serveur.sh "${{ matrix.paper }}" jar "${{ matrix.client }}"

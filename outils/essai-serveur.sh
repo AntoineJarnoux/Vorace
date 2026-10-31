@@ -1,16 +1,23 @@
 #!/bin/bash
 # Essai automatique sur un vrai serveur Paper (CI) : pose le golem d'exemple, lance des animations et vérifie
 # que les entités d'affichage changent vraiment, côté serveur (/vorace modele info) et côté joueur (faux client).
-# Usage : outils/essai-serveur.sh <version de Paper> <dossier contenant Vorace-*.jar>
+# Usage : outils/essai-serveur.sh <version de Paper> <dossier contenant Vorace-*.jar> [version du faux joueur]
+# Avec une version de joueur plus récente que le serveur, ViaVersion est installé (comme sur beaucoup de serveurs).
 set -uo pipefail
 VERSION=${1:-1.21.4}
 JAR=$(cd "$2" && ls "$PWD"/Vorace-*.jar | head -1)
+CLIENT=${3:-}
 OUTILS=$(cd "$(dirname "$0")" && pwd)
 mkdir -p essai-serveur/plugins && cd essai-serveur
 cp "$JAR" plugins/
 URL=$(curl -fsSL "https://fill.papermc.io/v3/projects/paper/versions/$VERSION/builds/latest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["downloads"]["server:default"]["url"])')
 echo "Paper : $URL"
 curl -fsSL -o paper.jar "$URL"
+if [ -n "$CLIENT" ]; then
+  VIA=$(curl -fsSL https://api.github.com/repos/ViaVersion/ViaVersion/releases/latest | python3 -c 'import json,sys; print([a["browser_download_url"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".jar")][0])')
+  echo "ViaVersion : $VIA"
+  curl -fsSL -o plugins/ViaVersion.jar "$VIA"
+fi
 echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
 online-mode=false
@@ -33,7 +40,7 @@ attendre() { # attendre <motif> <fichier> <secondes>
 }
 if ! attendre 'Done (' journal.txt 400; then echo "Le serveur n'a pas démarré"; tail -80 journal.txt; exit 1; fi
 cmd "vorace modele"
-node "$OUTILS/essai-bot.mjs" 30 > bot.txt 2>&1 &
+node "$OUTILS/essai-bot.mjs" 30 $CLIENT > bot.txt 2>&1 &
 BOT=$!
 attendre 'BOT CONNECTE' bot.txt 60 || { echo "Le faux joueur ne s'est pas connecté"; cat bot.txt; }
 sleep 2
@@ -64,5 +71,8 @@ echo "===== Fin du journal"; tail -30 journal.txt
 EMPREINTES=$(grep -ao 'empreinte=[-0-9.]*' journal.txt | sort -u | wc -l)
 DISTINCTES=$(grep -ao 'transformations-distinctes=[0-9]*' bot.txt | cut -d= -f2)
 echo "empreintes serveur distinctes : $EMPREINTES ; transformations reçues par le joueur : ${DISTINCTES:-0}"
+ERREURS=$(grep -acE 'ERROR\]: \[Vorace\]|at fr\.vorace\.' journal.txt)
+echo "erreurs de Vorace dans la console : $ERREURS"
+if [ "$ERREURS" -gt 0 ]; then echo "ECHEC : erreurs de Vorace dans la console"; exit 1; fi
 if [ "$EMPREINTES" -lt 3 ] || [ "${DISTINCTES:-0}" -lt 50 ]; then echo "ECHEC : les modèles ne s'animent pas"; exit 1; fi
 echo "ESSAI REUSSI"
