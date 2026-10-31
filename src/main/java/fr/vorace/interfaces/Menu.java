@@ -105,12 +105,16 @@ public class Menu implements InventoryHolder {
         return this;
     }
 
-    /** Ligne du bas en vitres grises, avec « Retour » (si parent) et « Fermer ». */
+    /** Ligne du bas : « Retour » (si parent) et « Fermer » ; sans le fond dessiné, vitres violettes et roses. */
     public Menu navigation(Supplier<Menu> parent) {
-        ItemStack vitre = icone("GRAY_STAINED_GLASS_PANE", " ");
-        for (int i = bas(); i < taille(); i++) if (inventaire.getItem(i) == null) inventaire.setItem(i, vitre);
-        if (parent != null) bouton(bas(), icone("ARROW", "<yellow>◀ Retour"), (p, d, m) -> parent.get().ouvrir(p));
-        bouton(taille() - 1, icone("BARRIER", "<red>Fermer"), (p, d, m) -> p.closeInventory());
+        if (!fond) {
+            for (int i = bas(); i < taille(); i++) {
+                if (inventaire.getItem(i) != null) continue;
+                inventaire.setItem(i, icone((i - bas()) % 2 == 0 ? "PURPLE_STAINED_GLASS_PANE" : "MAGENTA_STAINED_GLASS_PANE", " "));
+            }
+        }
+        if (parent != null) bouton(bas(), icone("ARROW", ROSE + "◀ Retour", "Revenir au menu précédent."), (p, d, m) -> parent.get().ouvrir(p));
+        bouton(taille() - 1, icone("BARRIER", DANGER + "Fermer"), (p, d, m) -> p.closeInventory());
         return this;
     }
 

@@ -42,7 +42,7 @@ bot.once('spawn', async () => {
     // fond dessiné : un caractère de glyphe (U+EA00 à U+F6FF) au début du titre
     const fond = /[\uEA00-\uF6FF]/.test(accueil) || /\\u(e[a-f]|f[0-6])[0-9a-f]{2}/i.test(accueil);
     console.log('MENU FOND ' + fond);
-    const ok = fond && accueil.includes('Vorace') && boutons >= 10 && objets > 0 && recu > 0 && modeles > 0;
+    const ok = fond && accueil.includes('Vorace') && boutons >= 10 && boutons <= 12 && /* pas de vitres sur le fond */ objets > 0 && recu > 0 && modeles > 0;
     console.log((ok ? 'MENUS OK' : 'MENUS ECHEC') + ` fond=${fond} boutons=${boutons} objets=${objets} recu=${recu} modeles=${modeles}`);
     fin(ok ? 0 : 1);
   } catch (e) {
