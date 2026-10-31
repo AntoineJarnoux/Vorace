@@ -32,3 +32,10 @@ jobs:
         with:
           name: Vorace
           path: build/libs/Vorace-*.jar
+      - name: Appels à l'API (pour comparer avec une compilation hors Gradle)
+        if: matrix.paper == '1.21.1-R0.1-SNAPSHOT'
+        run: |
+          mkdir -p build/javap && cd build/javap && unzip -q -o ../libs/Vorace-*.jar 'fr/*'
+          find fr -name '*.class' | sort | xargs javap -c -p | grep -oE '(invoke[a-z]+|[gp]et(static|field)|checkcast|instanceof|new) +#[0-9]+(, *[0-9]+)? +// .*(org/bukkit|io/papermc|net/kyori|io/netty|com/google|net/md_5)[^ ]*' | sed -E 's/#[0-9]+(, *[0-9]+)? +\/\/ //' | sort -u > ../appels-api.txt
+          echo "APPELS $(wc -l < ../appels-api.txt) $(sha256sum ../appels-api.txt | cut -c1-16)"
+          cat ../appels-api.txt

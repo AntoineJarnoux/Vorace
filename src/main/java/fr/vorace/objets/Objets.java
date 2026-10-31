@@ -234,8 +234,8 @@ public final class Objets {
     private Enchantment enchantement(String nom) {
         try {
             return Registry.ENCHANTMENT.get(cle(nom));
-        } catch (RuntimeException ex) {
-            plugin.getLogger().warning("Enchantements pas encore disponibles : " + ex.getMessage());
+        } catch (Throwable ex) {
+            plugin.getLogger().warning("Enchantement « " + nom + " » illisible : " + ex);
             return null;
         }
     }
@@ -262,8 +262,12 @@ public final class Objets {
         };
         // 1.21.2+ : "attack_damage" ; 1.21 / 1.21.1 : "generic.attack_damage" ou "player.xxx"
         for (String essai : new String[]{n, "generic." + n, "player." + n}) {
-            Attribute a = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(essai));
-            if (a != null) return a;
+            try {
+                Attribute a = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(essai));
+                if (a != null) return a;
+            } catch (Throwable ignore) {
+                // clé invalide pour cette version : on essaie la suivante
+            }
         }
         return null;
     }
@@ -378,8 +382,8 @@ public final class Objets {
                     }
                 }
                 if (ok) recettes.add(cle);
-            } catch (RuntimeException e) {
-                plugin.getLogger().warning("Objet " + d.id() + " : recette ignorée (" + e.getMessage() + ")");
+            } catch (Throwable e) {
+                plugin.getLogger().warning("Objet " + d.id() + " : recette ignorée (" + e + ")");
             }
         }
         if (!recettes.isEmpty()) plugin.getLogger().info(recettes.size() + " recette(s) enregistrée(s)");
