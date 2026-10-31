@@ -1,4 +1,4 @@
-## Vorace 0.6.0 : modèles animés
+## Vorace 0.6.1 : modèles animés
 
 Mets tes projets Blockbench (`.bbmodel`, format « Modèle générique », avant du modèle vers le nord) dans `plugins/Vorace/modeles-animes/` : Vorace lit les os, les cubes, les textures et les animations et fabrique le pack tout seul. Aucun export, aucune conversion. Exemple créé au démarrage : un golem de rubis (repos, marche, attaque, salut, dégât, mort).
 

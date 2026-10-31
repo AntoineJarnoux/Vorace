@@ -40,7 +40,7 @@ public final class TestModeles {
 
         // pack
         Map<String, byte[]> pack = GenerateurModeles.generer(m);
-        verifier(pack.containsKey("assets/vorace/textures/anime/golem_rubis/0.png"), "texture extraite du .bbmodel");
+        verifier(pack.containsKey("assets/vorace/textures/item/anime/golem_rubis/0.png"), "texture extraite du .bbmodel");
         int tete = m.parties().indexOf(trouver(m, "tete"));
         JsonObject mt = JsonParser.parseString(new String(pack.get("assets/vorace/models/anime/golem_rubis/p" + tete + ".json"), StandardCharsets.UTF_8)).getAsJsonObject();
         JsonArray els = mt.getAsJsonArray("elements");

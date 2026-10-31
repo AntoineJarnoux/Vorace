@@ -21,12 +21,15 @@ public final class GenerateurModeles {
         return "anime/" + modele + "/p" + index;
     }
 
-    /** Modèles des parties (assets/vorace/models/anime/...) et textures. */
+    /**
+     * Modèles des parties (assets/vorace/models/anime/...) et textures. Les textures vont dans textures/item/ :
+     * le jeu ne met dans son atlas que les images des dossiers block/ et item/ (sinon : texture manquante).
+     */
     public static Map<String, byte[]> generer(ModeleBB m) {
         Map<String, byte[]> sortie = new TreeMap<>();
         for (int t = 0; t < m.textures().size(); t++) {
             ModeleBB.Texture tex = m.textures().get(t);
-            if (tex.png() != null) sortie.put("assets/" + GenerateurPack.NS + "/textures/anime/" + m.id() + "/" + t + ".png", tex.png());
+            if (tex.png() != null) sortie.put("assets/" + GenerateurPack.NS + "/textures/item/anime/" + m.id() + "/" + t + ".png", tex.png());
         }
         for (int i = 0; i < m.parties().size(); i++) {
             Partie p = m.parties().get(i);
@@ -40,7 +43,7 @@ public final class GenerateurModeles {
     static JsonObject modele(ModeleBB m, Partie p) {
         JsonObject j = new JsonObject();
         JsonObject textures = new JsonObject();
-        for (int t = 0; t < m.textures().size(); t++) textures.addProperty(String.valueOf(t), GenerateurPack.NS + ":anime/" + m.id() + "/" + t);
+        for (int t = 0; t < m.textures().size(); t++) textures.addProperty(String.valueOf(t), GenerateurPack.NS + ":item/anime/" + m.id() + "/" + t);
         if (!m.textures().isEmpty()) textures.addProperty("particle", "#0");
         j.add("textures", textures);
         JsonArray elements = new JsonArray();
