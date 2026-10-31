@@ -166,7 +166,7 @@ intégrées et les animations, et fabrique le pack tout seul. Exemple créé au 
   agrandis à l'affichage pour dépasser la limite de taille des modèles d'objets.
 - Chaque os est une entité d'affichage (pas de mob caché ni d'armor stand) : animations fluides grâce à
   l'interpolation du jeu, réglable avec `modeles.intervalle-tics`.
-- `/vorace modele [liste|poser|anim <animation> [boucle]|stop|sur|invoquer|retirer]`.
+- `/vorace modele [liste|poser|anim <animation> [boucle]|stop|info|sur|invoquer|retirer]`.
 - API : `VoraceAPI.poserModele`, `attacherModele`, `jouerAnimation`, `modeleAnime`, `retirerModele`.
 
 Pas encore pris en charge : expressions Molang dans les animations (seulement des nombres), maillages (meshes),
@@ -196,7 +196,7 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
 | `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
-| `/vorace modele [liste\|poser\|anim\|stop\|sur\|invoquer\|retirer]` | modèles animés |
+| `/vorace modele [liste\|poser\|anim\|stop\|info\|sur\|invoquer\|retirer]` | modèles animés |
 | `/emojis` | (tous les joueurs) liste des emojis du chat |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
