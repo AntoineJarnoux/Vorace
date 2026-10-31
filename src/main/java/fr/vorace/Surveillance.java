@@ -54,6 +54,7 @@ public final class Surveillance {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (plugin.objets() != null) { plugin.objets().charger(true); plugin.rafraichirMeubles(); }
             if (plugin.glyphes() != null) plugin.glyphes().charger();
+            if (plugin.modeles() != null) plugin.modeles().charger();
             plugin.reconstruire(null);
         });
     }
@@ -66,6 +67,9 @@ public final class Surveillance {
         }
         if (plugin.glyphes() != null) {
             sources.add(new Recherche.Trouve("glyphes", plugin.glyphes().dossier(), Files.isDirectory(plugin.glyphes().dossier())));
+        }
+        if (plugin.modeles() != null) {
+            sources.add(new Recherche.Trouve("modeles-animes", plugin.modeles().dossier(), Files.isDirectory(plugin.modeles().dossier())));
         }
         long h = 17;
         for (Recherche.Trouve t : sources) {

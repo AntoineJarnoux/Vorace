@@ -11,6 +11,8 @@ import fr.vorace.blocs.Blocs;
 import fr.vorace.blocs.EcouteurBlocs;
 import fr.vorace.glyphes.EcouteurGlyphes;
 import fr.vorace.glyphes.Glyphes;
+import fr.vorace.modeles.EcouteurModeles;
+import fr.vorace.modeles.Modeles;
 import fr.vorace.meubles.EcouteurMeubles;
 import fr.vorace.meubles.Meubles;
 import fr.vorace.objets.EcouteurObjets;
@@ -48,6 +50,7 @@ public final class Vorace extends JavaPlugin {
     private Meubles meubles;
     private Blocs blocs;
     private Glyphes glyphes;
+    private Modeles modeles;
     private volatile String testHebergement;
 
     public Reglages reglages() { return reglages; }
@@ -59,6 +62,7 @@ public final class Vorace extends JavaPlugin {
     public Meubles meubles() { return meubles; }
     public Blocs blocs() { return blocs; }
     public Glyphes glyphes() { return glyphes; }
+    public Modeles modeles() { return modeles; }
     public String testHebergement() { return testHebergement; }
 
     @Override
@@ -81,6 +85,13 @@ public final class Vorace extends JavaPlugin {
             glyphes.charger();
         } catch (Throwable t) {
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les glyphes", t);
+        }
+        try {
+            modeles = new Modeles(this);
+            modeles.charger();
+        } catch (Throwable t) {
+            modeles = null;
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les modèles animés", t);
         }
         VoraceAPI.initialiser(this);
         demarrerHebergement();
@@ -108,6 +119,14 @@ public final class Vorace extends JavaPlugin {
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les blocs", t);
         }
 
+        if (modeles != null) {
+            try {
+                Bukkit.getPluginManager().registerEvents(new EcouteurModeles(this), this);
+                modeles.demarrer();
+            } catch (Throwable t) {
+                getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les modèles animés", t);
+            }
+        }
         try {
             Bukkit.getPluginManager().registerEvents(new EcouteurGlyphes(this), this);
         } catch (Throwable t) {
@@ -150,6 +169,9 @@ public final class Vorace extends JavaPlugin {
     @Override
     public void onDisable() {
         if (surveillance != null) surveillance.arreter();
+        if (modeles != null) {
+            try { modeles.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des modèles animés : " + t); }
+        }
         if (blocs != null) {
             try { blocs.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des blocs : " + t); }
         }
@@ -167,6 +189,7 @@ public final class Vorace extends JavaPlugin {
         Messages.charger(getConfig());
         objets.charger(true);
         glyphes.charger();
+        if (modeles != null) modeles.charger();
         rafraichirMeubles();
         if (!ancien.mode().equals(reglages.mode()) || ancien.portDedie() != reglages.portDedie()
             || !ancien.adressePublique().equals(reglages.adressePublique()) || ancien.portPublic() != reglages.portPublic()

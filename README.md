@@ -148,6 +148,30 @@ fond_coffre:
 
 Chaque glyphe garde son caractère d'un redémarrage à l'autre (`donnees/glyphes.txt`), de U+EA00 à U+F6FF.
 
+### Modèles animés (0.6)
+
+Mets tes projets Blockbench (`.bbmodel`, format « Modèle générique », l'avant du modèle tourné vers le nord)
+dans `plugins/Vorace/modeles-animes/`. Rien d'autre à faire : Vorace lit les os, les cubes, les textures
+intégrées et les animations, et fabrique le pack tout seul. Exemple créé au premier démarrage : `golem_rubis`
+(animations repos, marche, attaque, salut, degat, mort).
+
+- **Modèles posés** : `/vorace modele poser golem_rubis [animation]`, sauvegardés avec le monde, avec une hitbox
+  à la taille du modèle. Clic droit dessus : animation `clic` (ou `interact`) si elle existe.
+- **Modèles sur des mobs** : `/vorace modele sur <modèle>` (le mob regardé) ou `/vorace modele invoquer <modèle> [mob]`.
+  Le mob devient invisible et le modèle suit ses mouvements. Animations jouées toutes seules d'après leur nom :
+  `idle`/`repos`, `walk`/`marche`, `run`/`course`, `attack`/`attaque`, `hurt`/`degat`, `death`/`mort`.
+- Animations Blockbench : rotation, position, échelle ; interpolation linéaire, Catmull-Rom et en escalier ;
+  boucle, une fois ou figée à la fin. Les os imbriqués, les pivots et les cubes tournés dans tous les sens sont gérés
+  (un cube tourné sur plusieurs axes devient une partie à lui seul), et les grands modèles sont réduits puis
+  agrandis à l'affichage pour dépasser la limite de taille des modèles d'objets.
+- Chaque os est une entité d'affichage (pas de mob caché ni d'armor stand) : animations fluides grâce à
+  l'interpolation du jeu, réglable avec `modeles.intervalle-tics`.
+- `/vorace modele [liste|poser|anim <animation> [boucle]|stop|sur|invoquer|retirer]`.
+- API : `VoraceAPI.poserModele`, `attacherModele`, `jouerAnimation`, `modeleAnime`, `retirerModele`.
+
+Pas encore pris en charge : expressions Molang dans les animations (seulement des nombres), maillages (meshes),
+teinte rouge des dégâts.
+
 ## Installation
 
 1. Mets `Vorace-x.y.z.jar` dans `plugins/` et redémarre le serveur.
@@ -172,6 +196,7 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
 | `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
+| `/vorace modele [liste\|poser\|anim\|stop\|sur\|invoquer\|retirer]` | modèles animés |
 | `/emojis` | (tous les joueurs) liste des emojis du chat |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
@@ -230,7 +255,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 3. ✅ Meubles (modèles 3D posables, hitbox, sièges, lumières, coffres)
 4. ✅ Blocs personnalisés (minerais, décorations, avec outils, vitesse de minage et drops)
 5. ✅ Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
-6. Modèles animés : import direct des .bbmodel, animations, sur des entités
+6. ✅ Modèles animés : import direct des .bbmodel, animations, sur des entités
 7. Paquets et bibliothèque commune (entités visibles par un seul joueur, API pour VoraceMMO)
 8. Conversion automatique des configurations Nexo, ItemsAdder et ModelEngine
 

@@ -74,6 +74,11 @@ glyphes:
   chat: true
   panneaux: true
 
+modeles:
+  # Modèles animés (plugins/Vorace/modeles-animes/*.bbmodel) : nombre de tics entre deux images de l'animation.
+  # 1 = le plus fluide, 2 = deux fois moins de données envoyées aux joueurs (le jeu adoucit entre les images).
+  intervalle-tics: 2
+
 surveillance:
   # Reconstruit le pack tout seul quand un pack source ou un objet change (par exemple après /meg reload).
   actif: true

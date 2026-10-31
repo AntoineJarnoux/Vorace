@@ -2,6 +2,8 @@ package fr.vorace;
 
 import fr.vorace.envoi.Envoi;
 import fr.vorace.glyphes.Glyphes;
+import fr.vorace.modeles.ModeleBB;
+import fr.vorace.modeles.Modeles;
 import fr.vorace.objets.DefinitionObjet;
 import fr.vorace.objets.MenuObjets;
 import fr.vorace.pack.Constructeur;
@@ -90,6 +92,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "meuble", "meubles" -> meuble(s, a);
             case "bloc", "blocs" -> bloc(s, a);
             case "glyphe", "glyphes" -> glyphe(s, a);
+            case "modele", "modeles", "modèle" -> modele(s, a);
             case "emojis", "emoji" -> emojis(s);
             case "info" -> info(s);
             case "sources" -> sources(s);
@@ -105,6 +108,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace meuble [liste|poser|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
                 s.sendMessage(Messages.brut("<white>/vorace bloc [liste|poser|casser|info]</white> <gray>blocs personnalisés"));
                 s.sendMessage(Messages.brut("<white>/vorace glyphe [liste|menu <fond>]</white> <gray>glyphes et fonds de menus"));
+                s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|sur|invoquer|retirer]</white> <gray>modèles animés"));
                 s.sendMessage(Messages.brut("<white>/emojis</white> <gray>(joueurs) liste des emojis du chat"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
@@ -260,6 +264,88 @@ public final class Commande implements CommandExecutor, TabCompleter {
         s.sendMessage(Messages.brut("<gray>Dans un nom d'objet ou un message : <white><glyphe:id></white>, décalage : <white><decalage:-8></white>"));
     }
 
+    private void modele(CommandSender s, String[] a) {
+        Modeles m = plugin.modeles();
+        if (m == null) { s.sendMessage(Messages.brut("<red>Les modèles animés n'ont pas pu démarrer (voir la console).")); return; }
+        String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
+        Player p = s instanceof Player j ? j : null;
+        if (!act.equals("liste") && p == null) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+        switch (act) {
+            case "poser" -> {
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace modele poser <modèle> [animation]")); return; }
+                ModeleBB def = m.modele(a[2]);
+                if (def == null) { s.sendMessage(Messages.brut("<red>Modèle inconnu : " + Messages.echapper(a[2]))); return; }
+                Block cible = p.getTargetBlockExact(8);
+                BlockFace face = p.getTargetBlockFace(8);
+                if (cible == null || face == null) { s.sendMessage(Messages.brut("<red>Regarde un bloc à moins de 8 blocs.")); return; }
+                org.bukkit.Location ou = cible.getRelative(face).getLocation().add(0.5, 0, 0.5);
+                if (face != BlockFace.UP) ou = cible.getLocation().add(0.5, 1, 0.5);
+                Modeles.Instance i = m.poser(def.id(), ou, p.getLocation().getYaw() + 180f, a.length > 3 ? a[3] : null);
+                s.sendMessage(Messages.brut(i == null ? "<red>Impossible de poser ce modèle." : "<green>Modèle " + Messages.echapper(def.id()) + " posé. <gray>Animations : <white>"
+                    + Messages.echapper(String.join(", ", def.animations().keySet()))));
+            }
+            case "anim", "animation", "jouer" -> {
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace modele anim <animation> [boucle]  (sur le modèle le plus proche)")); return; }
+                Modeles.Instance i = m.plusProche(p.getLocation(), 16);
+                if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
+                boolean boucle = a.length > 3 && a[3].toLowerCase(Locale.ROOT).startsWith("b");
+                if (!i.jouer(a[2], boucle)) {
+                    s.sendMessage(Messages.brut("<red>Animation inconnue. <gray>Animations de " + Messages.echapper(i.modele().id()) + " : <white>"
+                        + Messages.echapper(String.join(", ", i.modele().animations().keySet()))));
+                    return;
+                }
+                s.sendMessage(Messages.brut("<green>Animation " + Messages.echapper(a[2]) + (boucle ? " en boucle." : ".")));
+            }
+            case "stop" -> {
+                Modeles.Instance i = m.plusProche(p.getLocation(), 16);
+                if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
+                i.arreterAnimation();
+                s.sendMessage(Messages.brut("<green>Retour aux animations automatiques."));
+            }
+            case "sur" -> {
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace modele sur <modèle>  (regarde un mob)")); return; }
+                ModeleBB def = m.modele(a[2]);
+                if (def == null) { s.sendMessage(Messages.brut("<red>Modèle inconnu : " + Messages.echapper(a[2]))); return; }
+                org.bukkit.entity.Entity e = p.getTargetEntity(10);
+                if (!(e instanceof org.bukkit.entity.LivingEntity le) || e instanceof Player) { s.sendMessage(Messages.brut("<red>Regarde un mob à moins de 10 blocs.")); return; }
+                m.attacher(le, def.id());
+                s.sendMessage(Messages.brut("<green>Le mob porte maintenant le modèle " + Messages.echapper(def.id()) + "."));
+            }
+            case "invoquer" -> {
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace modele invoquer <modèle> [mob]  (golem de fer par défaut)")); return; }
+                ModeleBB def = m.modele(a[2]);
+                if (def == null) { s.sendMessage(Messages.brut("<red>Modèle inconnu : " + Messages.echapper(a[2]))); return; }
+                org.bukkit.entity.EntityType type = org.bukkit.entity.EntityType.IRON_GOLEM;
+                if (a.length > 3) {
+                    try { type = org.bukkit.entity.EntityType.valueOf(a[3].toUpperCase(Locale.ROOT)); } catch (IllegalArgumentException ex) {
+                        s.sendMessage(Messages.brut("<red>Mob inconnu : " + Messages.echapper(a[3]))); return;
+                    }
+                }
+                org.bukkit.entity.Entity e = p.getWorld().spawnEntity(p.getLocation(), type);
+                if (!(e instanceof org.bukkit.entity.LivingEntity le)) { e.remove(); s.sendMessage(Messages.brut("<red>Ce n'est pas un mob.")); return; }
+                if (le instanceof org.bukkit.entity.Mob mob) mob.getEquipment().clear();
+                m.attacher(le, def.id());
+                s.sendMessage(Messages.brut("<green>Mob invoqué avec le modèle " + Messages.echapper(def.id()) + "."));
+            }
+            case "retirer" -> {
+                double rayon = 8;
+                try { if (a.length > 2) rayon = Double.parseDouble(a[2]); } catch (NumberFormatException ignore) { }
+                Modeles.Instance i = m.plusProche(p.getLocation(), rayon);
+                if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de " + (int) rayon + " blocs.")); return; }
+                m.retirer(i);
+                s.sendMessage(Messages.brut("<green>Modèle retiré" + (i.surMob() ? " (le mob est redevenu visible)." : ".")));
+            }
+            default -> {
+                List<String> l = new ArrayList<>();
+                for (ModeleBB def : m.tous()) l.add(def.id() + " (" + def.parties().stream().filter(ModeleBB.Partie::visible).count() + " parties, animations : "
+                    + (def.animations().isEmpty() ? "aucune" : String.join(", ", def.animations().keySet())) + ")");
+                s.sendMessage(Messages.brut("<gray>" + l.size() + " modèle(s) animé(s), " + m.instances().size() + " en jeu :"));
+                for (String x : l) s.sendMessage(Messages.brut("<white> " + Messages.echapper(x)));
+                s.sendMessage(Messages.brut("<gray>/vorace modele poser <modèle> [animation] | anim <animation> [boucle] | stop | sur <modèle> | invoquer <modèle> [mob] | retirer"));
+            }
+        }
+    }
+
     private static int parseOu(String t, int defaut) {
         try { return Integer.parseInt(t.trim()); } catch (NumberFormatException e) { return defaut; }
     }
@@ -298,7 +384,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         List<String> r = new ArrayList<>();
         if (c.getName().equalsIgnoreCase("emojis")) return r;
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
@@ -318,6 +404,15 @@ public final class Commande implements CommandExecutor, TabCompleter {
             for (String o : List.of("liste", "menu")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 3 && a[0].equalsIgnoreCase("glyphe") && a[1].equalsIgnoreCase("menu") && s.hasPermission("vorace.admin")) {
             for (Glyphes.Glyphe g : plugin.glyphes().tous()) if (g.def().menu() && g.def().id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(g.def().id());
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("modele") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("liste", "poser", "anim", "stop", "sur", "invoquer", "retirer")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("modele") && List.of("poser", "sur", "invoquer").contains(a[1].toLowerCase(Locale.ROOT))
+            && s.hasPermission("vorace.admin") && plugin.modeles() != null) {
+            for (ModeleBB def : plugin.modeles().tous()) if (def.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(def.id());
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("modele") && a[1].equalsIgnoreCase("anim") && s.hasPermission("vorace.admin")
+            && plugin.modeles() != null && s instanceof Player p) {
+            Modeles.Instance i = plugin.modeles().plusProche(p.getLocation(), 16);
+            if (i != null) for (String n : i.modele().animations().keySet()) if (n.startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(n);
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

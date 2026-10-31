@@ -102,4 +102,41 @@ public final class VoraceAPI {
     public static net.kyori.adventure.text.Component emojis(Player joueur, net.kyori.adventure.text.Component texte) {
         return plugin == null || plugin.glyphes() == null ? texte : plugin.glyphes().remplacer(joueur, texte);
     }
+
+    // ------------------------------------------------------------------ modèles animés (0.6)
+
+    /** Pose un modèle animé (fichier modeles-animes/<id>.bbmodel) ; renvoie son entité de base, ou null. */
+    public static Entity poserModele(String id, org.bukkit.Location ou, float yaw, String animation) {
+        if (plugin == null || plugin.modeles() == null) return null;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().poser(id, ou, yaw, animation);
+        return i == null ? null : i.base();
+    }
+
+    /** Un mob porte le modèle (il devient invisible, « repos », « marche », « attaque », « degat », « mort » sont joués tout seuls). */
+    public static boolean attacherModele(org.bukkit.entity.LivingEntity mob, String id) {
+        return plugin != null && plugin.modeles() != null && plugin.modeles().attacher(mob, id) != null;
+    }
+
+    /** Joue une animation sur le modèle de cette entité (base posée ou mob). Faux si pas de modèle ou animation inconnue. */
+    public static boolean jouerAnimation(Entity base, String animation, boolean boucle) {
+        if (plugin == null || plugin.modeles() == null) return false;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        return i != null && i.jouer(animation, boucle);
+    }
+
+    /** Identifiant du modèle animé de cette entité, ou null. */
+    public static String modeleAnime(Entity base) {
+        if (plugin == null || plugin.modeles() == null) return null;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        return i == null ? null : i.modele().id();
+    }
+
+    /** Retire le modèle (une base posée disparaît, un mob redevient visible). */
+    public static boolean retirerModele(Entity base) {
+        if (plugin == null || plugin.modeles() == null) return false;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        if (i == null) return false;
+        plugin.modeles().retirer(i);
+        return true;
+    }
 }

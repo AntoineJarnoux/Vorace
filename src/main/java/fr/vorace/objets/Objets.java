@@ -119,6 +119,10 @@ public final class Objets {
             visuels.add(new Visuel(d.id(), materiauValide(d).name().toLowerCase(Locale.ROOT), d.texture(), d.modele(), d.enMain(), cmd(d), teinte, parent));
             if (numero != null) blocs.add(new GenerateurBlocs.Apparence(d.id(), numero, d.bloc().faces(), d.bloc().modele()));
         }
+        if (plugin.modeles() != null) {
+            for (String id : plugin.modeles().idsParties()) visuels.add(new Visuel(id, "paper", null, null, false, cmdPour(id), null, GenerateurPack.NS + ":" + id));
+            sauverCmd();
+        }
         Map<String, byte[]> fichiers = new java.util.TreeMap<>(GenerateurPack.generer(visuels, dossierRessources(), format, journal));
         fichiers.putAll(GenerateurBlocs.generer(blocs, dossierRessources(), journal));
         return fichiers;
@@ -405,12 +409,28 @@ public final class Objets {
     /** Numéro custom_model_data stable de l'objet (gardé d'un redémarrage à l'autre). */
     synchronized int cmd(DefinitionObjet d) {
         if (d.cmdFixe() != null) return d.cmdFixe();
-        Integer n = cmdAttribues.get(d.id());
+        return cmdPour(d.id());
+    }
+
+    /** Numéro custom_model_data stable pour un identifiant d'apparence (objet ou partie de modèle animé). */
+    public synchronized int cmdPour(String id) {
+        Integer n = cmdAttribues.get(id);
         if (n != null) return n;
         int max = 1000;
         for (int v : cmdAttribues.values()) max = Math.max(max, v);
-        cmdAttribues.put(d.id(), max + 1);
+        cmdAttribues.put(id, max + 1);
         return max + 1;
+    }
+
+    /** Objet invisible dans les inventaires, qui sert seulement à afficher une apparence du pack (parties de modèles animés). */
+    public ItemStack objetVisuel(String id) {
+        ItemStack objet = new ItemStack(Material.PAPER);
+        ItemMeta meta = objet.getItemMeta();
+        if (meta == null) return objet;
+        FormatPack f = plugin.packs().format();
+        if (f == null || f.majeur() < 42 || !appliquerItemModel(meta, id)) meta.setCustomModelData(cmdPour(id));
+        objet.setItemMeta(meta);
+        return objet;
     }
 
     // ---------------------------------------------------------------- recettes
