@@ -1,0 +1,21 @@
+name: Vorace
+version: '${version}'
+main: fr.vorace.Vorace
+api-version: '1.21'
+description: Plugin libre de packs de ressources, objets, meubles, blocs et glyphes
+authors: [ORA-KUN]
+website: https://github.com/ORA-KUN/Vorace
+load: STARTUP
+softdepend: [ModelEngine, MythicMobs]
+commands:
+  vorace:
+    description: Gestion du pack de ressources Vorace
+    usage: /vorace [reload|envoyer|info|sources|pack]
+    aliases: [vo]
+permissions:
+  vorace.admin:
+    description: Toutes les commandes de Vorace
+    default: op
+  vorace.pack:
+    description: Recevoir à nouveau le pack avec /vorace pack
+    default: true

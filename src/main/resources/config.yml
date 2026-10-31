@@ -1,0 +1,72 @@
+# ============================================================
+#  Vorace - plugin libre de packs de ressources
+#  Étape 1 : fusion des packs, hébergement et envoi aux joueurs
+#  Après une modification : /vorace reload
+# ============================================================
+
+pack:
+  # Texte affiché dans la liste des packs du joueur.
+  description: "Pack du serveur"
+
+  # Packs à fusionner, du MOINS prioritaire au PLUS prioritaire (le dernier gagne en cas de conflit).
+  # Chemins relatifs au dossier du serveur. "/*" = chaque dossier ou .zip contenu, par ordre alphabétique.
+  # Un chemin qui n'existe pas est simplement ignoré (voir /vorace sources).
+  sources:
+    - "plugins/ModelEngine/resource pack"
+    - "plugins/MythicMobs/Generation/resource_pack"
+    - "plugins/MythicMobs/Generation/resource_pack.zip"
+    - "plugins/Vorace/pack/sources/*"
+
+  # Fichiers à ne pas mettre dans le pack (en plus de .DS_Store, Thumbs.db, *.psd, *.bbmodel...).
+  ignorer: []
+
+  # Compacte les fichiers JSON (pack plus léger, rien ne change en jeu).
+  compacter-json: true
+
+  # "auto" = détecté depuis la version du serveur. Sinon un numéro, par exemple 46 ou 75.0
+  format: auto
+
+  # Image du pack (fichier dans plugins/Vorace/). Vide = celle du pack source le plus prioritaire.
+  icone: ""
+
+envoi:
+  # Envoyer le pack aux joueurs quand ils arrivent.
+  actif: true
+  # Attente après l'arrivée avant l'envoi (20 ticks = 1 seconde).
+  delai-ticks: 20
+  # Le joueur ne peut pas jouer sans le pack (bouton "Refuser" = déconnexion côté jeu).
+  obligatoire: true
+  # Si le pack n'est pas obligatoire : expulser quand même ceux qui le refusent.
+  expulser-si-refus: false
+  # Après une reconstruction (reload ou changement d'un pack source), renvoyer le nouveau pack
+  # à tous les joueurs connectés. Sinon il faut faire /vorace envoyer tous.
+  renvoyer-apres-modification: false
+
+hebergement:
+  # auto      = sur le port du jeu (rien à ouvrir chez l'hébergeur), sinon sur le port dédié
+  # meme-port = uniquement sur le port du jeu
+  # port      = petit serveur web sur "port-dedie" (l'hébergeur doit ouvrir ce port)
+  # externe   = tu mets toi-même plugins/Vorace/pack/genere/pack.zip en ligne, voir url-externe
+  mode: auto
+  # Adresse donnée aux joueurs pour télécharger. Vide = l'adresse qu'ils ont tapée pour se connecter.
+  adresse-publique: ""
+  # Port donné aux joueurs. 0 = celui qu'ils ont utilisé pour se connecter (ou le port dédié).
+  port-public: 0
+  port-dedie: 8163
+  # Pour le mode externe. {sha1} est remplacé par l'empreinte du pack.
+  url-externe: ""
+
+surveillance:
+  # Reconstruit le pack tout seul quand un pack source change (par exemple après /meg reload).
+  actif: true
+  intervalle-secondes: 5
+
+messages:
+  prefixe: "<gradient:#7b2ff7:#f107a3><bold>Vorace</bold></gradient> <dark_gray>»</dark_gray> "
+  invite: "<gray>Ce serveur utilise un pack de ressources pour ses objets, menus et modèles 3D."
+  refuse: "<yellow>Tu as refusé le pack : certains objets et menus s'afficheront mal. <gray>Tape <white>/vorace pack</white> pour le recevoir."
+  echec: "<red>Le pack n'a pas pu être téléchargé. <gray>Tape <white>/vorace pack</white> pour réessayer."
+  expulsion-refus: "<red>Le pack de ressources est obligatoire sur ce serveur.\n<gray>Accepte-le en te reconnectant (ou active-le dans Multijoueur > Modifier > Packs de ressources)."
+
+# Affiche le détail de chaque fusion et de chaque envoi dans la console.
+debug: false
