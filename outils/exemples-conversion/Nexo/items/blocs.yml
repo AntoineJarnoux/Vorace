@@ -1,0 +1,23 @@
+
+minerai_rubis:
+  itemname: Minerai de rubis
+  material: PAPER
+  Pack:
+    textures:
+      top: blocs/minerai_rubis_haut
+      bottom: blocs/minerai_rubis
+      side: blocs/minerai_rubis
+  Mechanics:
+    custom_block:
+      type: NOTEBLOCK
+      custom_variation: 1
+      hardness: 3
+      drop:
+        silktouch: true
+        fortune: true
+        minimal_type: IRON
+        best_tool: PICKAXE
+        loots:
+          - nexo_item: rubis
+            amount: 1..2
+            probability: 1.0

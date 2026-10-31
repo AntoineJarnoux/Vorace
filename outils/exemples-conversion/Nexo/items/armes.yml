@@ -1,0 +1,38 @@
+
+epee_rubis:
+  itemname: "<red>Épée de rubis"
+  material: DIAMOND_SWORD
+  lore:
+    - "&7Taillée dans un rubis"
+  Pack:
+    parent_model: item/handheld
+    texture: armes/epee_rubis
+  Enchantments:
+    sharpness: 2
+  AttributeModifiers:
+    - attribute: GENERIC_ATTACK_DAMAGE
+      amount: 9
+      operation: ADD_NUMBER
+      slot: HAND
+  Components:
+    max_stack_size: 1
+rubis:
+  itemname: "<#e0115f>Rubis"
+  material: PAPER
+  Pack:
+    texture: objets/rubis
+gemme_modele:
+  template: true
+  material: EMERALD
+  lore:
+    - "<gray>Une gemme rare"
+saphir:
+  template: gemme_modele
+  itemname: "<blue>Saphir"
+  Pack:
+    model: objets/saphir
+  Mechanics:
+    commands:
+      console:
+        - "say %p% brandit un saphir"
+      cooldown: 2000

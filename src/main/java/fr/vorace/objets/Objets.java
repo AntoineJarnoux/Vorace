@@ -73,6 +73,7 @@ public final class Objets {
     public void charger(boolean avecRecettes) {
         installerExemple();
         chargerCmd();
+        chargerAnciens();
         Map<String, DefinitionObjet> lues = new LinkedHashMap<>();
         List<String> problemes = new ArrayList<>();
         List<Path> fichiers;
@@ -252,6 +253,49 @@ public final class Objets {
         if (d.durabilite() != null && meta instanceof Damageable dmg) dmg.setMaxDamage(Math.max(1, d.durabilite()));
         objet.setItemMeta(meta);
         return objet;
+    }
+
+    // ---------------------------------------------------------------- objets convertis d'autres plugins
+
+    /** Clés où Nexo et Oraxen rangent l'identifiant de leurs objets. */
+    private static final List<String[]> CLES_ANCIENNES = List.of(new String[]{"nexo", "id"}, new String[]{"oraxen", "id"});
+    private volatile Map<String, String> anciens = Map.of();
+    private List<NamespacedKey> clesAnciennes;
+
+    /** Lit donnees/conversion-ids.yml (écrit par /vorace convertir) : ancien objet -> objet Vorace. */
+    private void chargerAnciens() {
+        File f = plugin.getDataFolder().toPath().resolve("donnees/conversion-ids.yml").toFile();
+        if (!f.isFile()) { anciens = Map.of(); return; }
+        YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
+        Map<String, String> m = new java.util.HashMap<>();
+        for (String k : y.getKeys(false)) {
+            String v = y.getString(k);
+            if (v != null) m.put(k.toLowerCase(Locale.ROOT), v);
+        }
+        anciens = m;
+    }
+
+    /** Pour un objet de Nexo ou d'Oraxen déjà converti : l'identifiant Vorace qui le remplace, sinon null. */
+    public String idAncien(ItemStack objet) {
+        if (anciens.isEmpty() || objet == null || !objet.hasItemMeta()) return null;
+        if (clesAnciennes == null) {
+            List<NamespacedKey> l = new ArrayList<>();
+            for (String[] c : CLES_ANCIENNES) {
+                NamespacedKey k = NamespacedKey.fromString(c[0] + ":" + c[1]);
+                if (k != null) l.add(k);
+            }
+            clesAnciennes = l;
+        }
+        ItemMeta meta = objet.getItemMeta();
+        if (meta == null) return null;
+        for (NamespacedKey k : clesAnciennes) {
+            String v;
+            try { v = meta.getPersistentDataContainer().get(k, PersistentDataType.STRING); } catch (RuntimeException e) { continue; }
+            if (v == null) continue;
+            String id = anciens.get((k.getNamespace() + ":" + v).toLowerCase(Locale.ROOT));
+            if (id != null && definitions.containsKey(id)) return id;
+        }
+        return null;
     }
 
     /** Identifiant Vorace d'un objet, ou null si ce n'est pas un objet Vorace. */

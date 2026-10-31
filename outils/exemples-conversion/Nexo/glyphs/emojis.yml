@@ -1,0 +1,9 @@
+
+etoile:
+  texture: glyphes/etoile
+  ascent: 7
+  height: 8
+  is_emoji: true
+  chat:
+    placeholders:
+      - ":etoile:"

@@ -1,0 +1,14 @@
+
+recette_epee_rubis:
+  result:
+    nexo_item: epee_rubis
+    amount: 1
+  shape:
+    - "_R_"
+    - "_R_"
+    - "_S_"
+  ingredients:
+    R:
+      nexo_item: rubis
+    S:
+      minecraft_type: STICK

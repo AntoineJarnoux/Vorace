@@ -14,11 +14,14 @@ import fr.vorace.modeles.ModeleBB.Texture;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /** Lit un fichier .bbmodel (projet Blockbench, formats « Modèle générique », Java ou Bedrock). */
 public final class LecteurBBModel {
@@ -76,6 +79,11 @@ public final class LecteurBBModel {
         List<Partie> parties = new ArrayList<>();
         List<Object> hors = new ArrayList<>();
         JsonArray outliner = tableau(racine, "outliner");
+        // os spéciaux des modèles faits pour ModelEngine : « hitbox » (taille de la hitbox) et « shadow » (ombre), jamais affichés
+        Set<String> cubesHitbox = new HashSet<>();
+        Set<String> cubesCaches = new HashSet<>();
+        if (outliner != null) for (JsonElement e : outliner) if (e.isJsonObject()) osSpeciaux(e.getAsJsonObject(), cubesHitbox, cubesCaches);
+        for (String u : cubesCaches) elements.remove(u);
         if (outliner != null) {
             for (JsonElement e : outliner) {
                 if (e.isJsonObject()) lireOs(e.getAsJsonObject(), -1, new double[3], elements, decalage, textures, parties, problemes, id);
@@ -140,10 +148,16 @@ public final class LecteurBBModel {
             }
         }
 
-        // taille au sol, pour la hitbox
+        // taille au sol, pour la hitbox (l'os « hitbox » s'il existe, sinon tous les cubes)
+        Collection<JsonObject> pourTaille = elements.values();
+        if (!cubesHitbox.isEmpty()) {
+            List<JsonObject> hb = new ArrayList<>();
+            for (JsonElement e : els) if (cubesHitbox.contains(texte(e.getAsJsonObject(), "uuid", ""))) hb.add(e.getAsJsonObject());
+            if (!hb.isEmpty()) pourTaille = hb;
+        }
         double minX = 0, maxX = 0, minY = 0, maxY = 0, minZ = 0, maxZ = 0;
         boolean premier = true;
-        for (JsonObject c : elements.values()) {
+        for (JsonObject c : pourTaille) {
             double[] de = vecteur(c, "from"), a = vecteur(c, "to");
             for (int i = 0; i < 3; i++) { de[i] += decalage[i]; a[i] += decalage[i]; }
             if (premier) {
@@ -163,6 +177,7 @@ public final class LecteurBBModel {
     private static void lireOs(JsonObject g, int parent, double[] pivotParent, Map<String, JsonObject> elements, double[] decalage,
                                List<Texture> textures, List<Partie> parties, List<String> problemes, String id) {
         if (g.has("visibility") && !g.get("visibility").getAsBoolean()) return;
+        if (osSpecial(g)) return; // os « hitbox » / « shadow » de ModelEngine
         double[] pivot = vecteur(g, "origin");
         for (int i = 0; i < 3; i++) pivot[i] += decalage[i];
         double[] rotation = g.has("rotation") ? vecteur(g, "rotation") : new double[3];
@@ -184,6 +199,37 @@ public final class LecteurBBModel {
         parties.set(index, new Partie(texte(g, "name", "os"), texte(g, "uuid", null), parent, pivot, rotation, cubes, 1));
         parties.addAll(detaches);
         for (JsonObject s : sousGroupes) lireOs(s, index, pivot, elements, decalage, textures, parties, problemes, id);
+    }
+
+    /** Repère les os « hitbox » et « shadow » (convention de ModelEngine) : leurs cubes ne sont pas affichés. */
+    private static void osSpeciaux(JsonObject g, Set<String> hitbox, Set<String> caches) {
+        String nom = texte(g, "name", "").toLowerCase(Locale.ROOT);
+        boolean special = nom.equals("hitbox") || nom.equals("shadow");
+        JsonArray enfants = tableau(g, "children");
+        if (enfants == null) return;
+        for (JsonElement e : enfants) {
+            if (e.isJsonObject()) {
+                if (special) marquer(e.getAsJsonObject(), caches);
+                else osSpeciaux(e.getAsJsonObject(), hitbox, caches);
+            } else if (special) {
+                caches.add(e.getAsString());
+                if (nom.equals("hitbox")) hitbox.add(e.getAsString());
+            }
+        }
+    }
+
+    private static void marquer(JsonObject g, Set<String> caches) {
+        JsonArray enfants = tableau(g, "children");
+        if (enfants == null) return;
+        for (JsonElement e : enfants) {
+            if (e.isJsonObject()) marquer(e.getAsJsonObject(), caches);
+            else caches.add(e.getAsString());
+        }
+    }
+
+    static boolean osSpecial(JsonObject g) {
+        String nom = texte(g, "name", "").toLowerCase(Locale.ROOT);
+        return nom.equals("hitbox") || nom.equals("shadow");
     }
 
     private static boolean visible(JsonObject c) {

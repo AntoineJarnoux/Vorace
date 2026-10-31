@@ -1,0 +1,32 @@
+
+chaise:
+  itemname: Chaise en bois
+  material: PAPER
+  Pack:
+    model: meubles/chaise
+  Mechanics:
+    furniture:
+      hitbox:
+        barriers:
+          - "0,0,0"
+      seat: "0,0.5,0"
+      restricted_rotation: VERY_STRICT
+      limited_placing:
+        floor: true
+        wall: false
+        roof: false
+      block_sounds:
+        place_sound: block.wood.place
+        break_sound: block.wood.break
+lanterne:
+  itemname: Lanterne
+  Pack:
+    model: meubles/lanterne
+  Mechanics:
+    furniture:
+      hitbox:
+        interactions:
+          - "0,0,0 0.5,0.8"
+      lights:
+        lights:
+          - "0,0,0 12"

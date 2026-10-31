@@ -102,7 +102,16 @@ public final class EcouteurObjets implements Listener {
         for (int i = 0; i < contenu.length; i++) {
             ItemStack it = contenu[i];
             String id = plugin.objets().id(it);
-            if (id == null) continue;
+            if (id == null) {
+                // objet de Nexo / Oraxen converti par /vorace convertir : remplacé par sa version Vorace
+                String nouveau = plugin.objets().idAncien(it);
+                DefinitionObjet d = nouveau == null ? null : plugin.objets().definition(nouveau);
+                if (d != null) {
+                    inv.setItem(i, plugin.objets().mettreAJour(it, d));
+                    n++;
+                }
+                continue;
+            }
             DefinitionObjet d = plugin.objets().definition(id);
             if (d == null || !plugin.objets().perime(it, d)) continue;
             inv.setItem(i, plugin.objets().mettreAJour(it, d));

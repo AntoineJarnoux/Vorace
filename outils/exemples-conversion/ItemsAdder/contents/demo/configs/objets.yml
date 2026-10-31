@@ -1,0 +1,96 @@
+
+info:
+  namespace: demo
+items:
+  baguette:
+    name: "&dBaguette magique"
+    lore:
+      - "&7Pour lancer des sorts"
+    resource:
+      material: STICK
+      generate: true
+      textures:
+        - item/baguette.png
+    enchants:
+      - DURABILITY:3
+    attribute_modifiers:
+      mainhand:
+        attackDamage: 4
+    events:
+      interact:
+        right:
+          execute_commands:
+            - command: "say %player% lance un sort"
+              as_console: true
+  table:
+    display_name: display-name-table
+    resource:
+      material: PAPER
+      generate: false
+      model_path: meubles/table
+    behaviours:
+      furniture:
+        solid: true
+        hitbox:
+          length: 1
+          width: 2
+          height: 1
+        placeable_on:
+          floor: true
+  tabouret:
+    name: Tabouret
+    graphics:
+      model: meubles/tabouret
+    behaviours:
+      furniture:
+        entity: item_display
+        solid: false
+        hitbox:
+          length: 1
+          width: 1
+          height: 0.5
+      furniture_sit:
+        sit_height: 0.4
+  bloc_ambre:
+    name: "Bloc d'ambre"
+    resource:
+      material: PAPER
+      generate: true
+      textures:
+        - block/ambre.png
+    behaviours:
+      block:
+        placed_model:
+          type: REAL_NOTE
+        hardness: 2
+        break_tools_whitelist:
+          - PICKAXE
+font_images:
+  soleil:
+    path: font/soleil.png
+    scale_ratio: 9
+    y_position: 8
+    show_in_gui: true
+loots:
+  blocks:
+    ambre:
+      type: demo:bloc_ambre
+      items:
+        goutte:
+          item: demo:baguette
+          min_amount: 1
+          max_amount: 1
+          chance: 50
+recipes:
+  crafting_table:
+    baguette_recette:
+      enabled: true
+      pattern:
+        - "  X"
+        - " X "
+        - "X  "
+      ingredients:
+        X: STICK
+      result:
+        item: demo:baguette
+        amount: 1

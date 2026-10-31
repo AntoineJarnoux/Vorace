@@ -1,6 +1,7 @@
 package fr.vorace;
 
 import fr.vorace.envoi.Envoi;
+import fr.vorace.conversion.Conversion;
 import fr.vorace.glyphes.Glyphes;
 import fr.vorace.modeles.ModeleBB;
 import fr.vorace.modeles.Modeles;
@@ -94,6 +95,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "glyphe", "glyphes" -> glyphe(s, a);
             case "modele", "modeles", "modèle" -> modele(s, a);
             case "paquets", "paquet" -> paquets(s, a);
+            case "convertir", "convert", "conversion" -> convertir(s, a);
             case "emojis", "emoji" -> emojis(s);
             case "info" -> info(s);
             case "sources" -> sources(s);
@@ -111,11 +113,76 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace glyphe [liste|menu <fond>]</white> <gray>glyphes et fonds de menus"));
                 s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|info|prive|public|sur|invoquer|retirer]</white> <gray>modèles animés"));
                 s.sendMessage(Messages.brut("<white>/vorace paquets [stats|journal|ecoutes] [joueur]</white> <gray>paquets du jeu"));
+                s.sendMessage(Messages.brut("<white>/vorace convertir [nexo|oraxen|itemsadder|modelengine|tout]</white> <gray>reprend le contenu de ces plugins"));
                 s.sendMessage(Messages.brut("<white>/emojis</white> <gray>(joueurs) liste des emojis du chat"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
         }
         return true;
+    }
+
+    private volatile boolean conversionEnCours;
+
+    /** /vorace convertir [nexo|oraxen|itemsadder|modelengine|tout] */
+    private void convertir(CommandSender s, String[] a) {
+        java.nio.file.Path plugins = plugin.getDataFolder().toPath().getParent();
+        java.nio.file.Path vorace = plugin.getDataFolder().toPath();
+        List<Conversion.Source> presentes = new ArrayList<>();
+        for (Conversion.Source x : Conversion.Source.values()) if (Conversion.present(plugins, x)) presentes.add(x);
+        if (a.length < 2) {
+            s.sendMessage(Messages.brut("<gray>Reprend les objets, meubles, blocs, glyphes et modèles d'autres plugins (leurs fichiers de config, "
+                + "pas leur code). Rien n'est modifié chez eux : tu peux les garder le temps de vérifier."));
+            for (Conversion.Source x : Conversion.Source.values()) {
+                boolean ok = presentes.contains(x);
+                s.sendMessage(Messages.brut(ok
+                    ? "<green>✔</green> <click:run_command:'/vorace convertir " + x.id + "'><hover:show_text:'Clique pour convertir'><white>" + x.nom + "</white> <gray>trouvé : <yellow>[convertir]</yellow></hover></click>"
+                    : "<dark_gray>✘ " + x.nom + " (dossier absent)"));
+            }
+            if (presentes.size() > 1) s.sendMessage(Messages.brut("<click:run_command:'/vorace convertir tout'><yellow>[tout convertir]</yellow></click>"));
+            return;
+        }
+        List<Conversion.Source> liste = new ArrayList<>();
+        if (a[1].equalsIgnoreCase("tout") || a[1].equalsIgnoreCase("all")) {
+            liste.addAll(presentes);
+        } else {
+            Conversion.Source x = Conversion.Source.lire(a[1]);
+            if (x == null) { s.sendMessage(Messages.brut("<red>Inconnu : " + Messages.echapper(a[1]) + " <gray>(nexo, oraxen, itemsadder, modelengine ou tout)")); return; }
+            if (!presentes.contains(x)) { s.sendMessage(Messages.brut("<red>Rien à convertir : dossier de " + x.nom + " introuvable dans plugins/.")); return; }
+            liste.add(x);
+        }
+        if (liste.isEmpty()) { s.sendMessage(Messages.brut("<red>Aucun plugin à convertir trouvé dans plugins/.")); return; }
+        if (conversionEnCours) { s.sendMessage(Messages.brut("<yellow>Une conversion est déjà en cours.")); return; }
+        conversionEnCours = true;
+        s.sendMessage(Messages.brut("<gray>Conversion en cours..."));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            List<Object> resultats = new ArrayList<>();
+            for (Conversion.Source x : liste) {
+                try {
+                    resultats.add(Conversion.convertir(plugins, vorace, x));
+                } catch (Throwable t) {
+                    plugin.getLogger().warning("Conversion de " + x.nom + " : " + t);
+                    resultats.add(x.nom + " : " + t.getMessage());
+                }
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                conversionEnCours = false;
+                for (Object o : resultats) {
+                    if (o instanceof Conversion.Resultat r) {
+                        s.sendMessage(Messages.brut("<green>✔ " + r.source().nom + "</green> <gray>: " + Messages.echapper(r.resume())));
+                        for (String m : r.remarques()) s.sendMessage(Messages.brut("<dark_gray>- <gray>" + Messages.echapper(m)));
+                        if (r.nbRemarques() > r.remarques().size()) s.sendMessage(Messages.brut("<dark_gray>... et " + (r.nbRemarques() - r.remarques().size()) + " autre(s)"));
+                        s.sendMessage(Messages.brut("<gray>Rapport complet : <white>plugins/Vorace/" + Messages.echapper(vorace.relativize(r.rapport()).toString().replace('\\', '/'))));
+                    } else {
+                        s.sendMessage(Messages.brut("<red>✘ " + Messages.echapper(String.valueOf(o))));
+                    }
+                }
+                s.sendMessage(Messages.brut("<gray>Rechargement de Vorace..."));
+                plugin.rechargerConfig();
+                for (Player p : Bukkit.getOnlinePlayers()) plugin.ecouteurObjets().mettreAJour(p);
+                plugin.reconstruire(res -> s.sendMessage(Messages.brut("<green>Pack prêt.</green> <gray>Les objets sont dans <white>/vorace objets</white>. "
+                    + "Pour l'envoyer à tout le monde : <white>/vorace envoyer tous")));
+            });
+        });
     }
 
     private void donner(CommandSender s, String[] a) {
@@ -447,9 +514,11 @@ public final class Commande implements CommandExecutor, TabCompleter {
         List<String> r = new ArrayList<>();
         if (c.getName().equalsIgnoreCase("emojis")) return r;
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "paquets", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "paquets", "convertir", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("convertir") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("nexo", "oraxen", "itemsadder", "modelengine", "tout")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));
             r.removeIf(x -> !x.toLowerCase(Locale.ROOT).startsWith(a[1].toLowerCase(Locale.ROOT)));

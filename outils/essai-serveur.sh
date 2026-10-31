@@ -18,6 +18,16 @@ if [ -n "$CLIENT" ]; then
   echo "ViaVersion : $VIA"
   curl -fsSL -o plugins/ViaVersion.jar "$VIA"
 fi
+# contenu d'exemple d'autres plugins, pour essayer /vorace convertir (leurs fichiers seulement, pas les plugins)
+cp -r "$OUTILS/exemples-conversion/." plugins/
+mkdir -p plugins/ModelEngine/blueprints/monstres
+python3 - "$OUTILS/../src/main/resources/exemples/modeles/golem_rubis.bbmodel" plugins/ModelEngine/blueprints/monstres/golem_me.bbmodel <<'PY'
+import json, sys
+g = json.load(open(sys.argv[1], encoding='utf-8'))
+g["elements"].append({"name": "hb", "type": "cube", "uuid": "hitbox-cube-0001", "from": [-8, 0, -8], "to": [8, 40, 8], "origin": [0, 0, 0], "faces": {}})
+g["outliner"].append({"name": "hitbox", "origin": [0, 0, 0], "uuid": "hitbox-groupe-0001", "children": ["hitbox-cube-0001"]})
+json.dump(g, open(sys.argv[2], 'w', encoding='utf-8'))
+PY
 echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
 online-mode=false
@@ -63,6 +73,19 @@ cmd "gamerule doDaylightCycle false"
 cmd "time set 18000"
 cmd "vorace paquets essai"
 wait $BOT
+# conversion du contenu d'exemple de Nexo, ItemsAdder et ModelEngine
+AVANT_CONVERSION=$(wc -l < journal.txt)
+cmd "vorace convertir"
+cmd "vorace convertir tout"
+attendre 'Les objets sont dans' journal.txt 90 || echo "La conversion n'a pas fini"
+sleep 2
+cmd "vorace modele poser modelengine/golem_me"
+sleep 2
+cmd "vorace modele info"
+cmd "vorace meuble liste"
+cmd "vorace bloc liste"
+cmd "vorace glyphe liste"
+sleep 2
 cmd "stop"
 for _ in $(seq 1 60); do kill -0 $SERVEUR 2>/dev/null || break; sleep 1; done
 kill $SERVEUR 2>/dev/null
@@ -75,6 +98,13 @@ echo "===== Fin du journal"; tail -30 journal.txt
 EMPREINTES=$(grep -ao 'empreinte=[-0-9.]*' journal.txt | sort -u | wc -l)
 DISTINCTES=$(grep -ao 'transformations-distinctes=[0-9]*' bot.txt | cut -d= -f2)
 echo "empreintes serveur distinctes : $EMPREINTES ; transformations reçues par le joueur : ${DISTINCTES:-0}"
+echo "===== Conversion"
+tail -n +"$AVANT_CONVERSION" journal.txt | grep -av 'Loading server plugin' | head -80
+for f in essai-serveur/plugins/Vorace/conversion/rapport-*.txt plugins/Vorace/conversion/rapport-*.txt; do [ -f "$f" ] && { echo "--- $f"; cat "$f"; }; done
+ALERTES_CONVERSION=$(tail -n +"$AVANT_CONVERSION" journal.txt | grep -acE 'WARN\]: \[Vorace\]')
+echo "alertes de Vorace après la conversion : $ALERTES_CONVERSION"
+for s in Nexo ItemsAdder ModelEngine; do grep -aqE "$s : [0-9]+ objet" journal.txt || { echo "ECHEC : conversion de $s"; exit 1; }; done
+if [ "$ALERTES_CONVERSION" -gt 0 ]; then echo "ECHEC : les fichiers convertis donnent des alertes au chargement"; exit 1; fi
 ERREURS=$(grep -acE 'ERROR\]: \[Vorace\]|at fr\.vorace\.' journal.txt)
 echo "erreurs de Vorace dans la console : $ERREURS"
 if [ "$ERREURS" -gt 0 ]; then echo "ECHEC : erreurs de Vorace dans la console"; exit 1; fi

@@ -204,6 +204,33 @@ VoraceAPI.ecouterPaquets(this, Sens.SORTANT, p -> {
 - `/vorace paquets stats [joueur]` : les paquets les plus fréquents (par seconde). `/vorace paquets ecoutes` : qui écoute quoi.
 - `paquets.actif: false` dans la config si on ne veut pas que Vorace touche aux connexions.
 
+### Conversion depuis Nexo, Oraxen, ItemsAdder et ModelEngine (0.8)
+
+`/vorace convertir` montre les plugins trouvés dans `plugins/` (clic pour convertir), `/vorace convertir tout` les
+convertit tous. Vorace lit seulement leurs **fichiers de configuration et leurs images** (jamais leur code), et
+ne modifie rien chez eux : tu peux les garder le temps de vérifier, puis les retirer.
+
+- **Nexo / Oraxen** (`items/`, `glyphs/`, `recipes/`, `pack/assets/`) : objets (nom, description, matériau,
+  texture ou modèle, enchantements, attributs, couleur, durabilité, taille de pile, commandes au clic), modèles
+  d'objets (`template`), meubles (barrières, hitbox d'interaction, sièges, lumière, rotation, où poser, coffre,
+  taille, sons), blocs (textures par face, dureté, outil, butin, Fortune, Toucher de soie), glyphes, recettes
+  (avec forme, sans forme, four) et sons du pack.
+- **ItemsAdder** (`contents/<espace>/configs`, textures et modèles des deux organisations) : objets (`resource:` et
+  `graphics:`), `variant_of`, meubles (hitbox, solide ou non, siège, lumière, où poser, coffre, sons), blocs
+  (texture, dureté, outils, sons), butin de `loots.blocks`, images de police (`font_images`) et recettes.
+- **ModelEngine** (`blueprints/`) : les .bbmodel sont recopiés dans `modeles-animes/modelengine/` ; les os
+  `hitbox` et `shadow` ne sont pas affichés, et l'os `hitbox` donne la taille de la hitbox.
+  Exemple : `/vorace modele poser modelengine/dragon`.
+
+Le résultat va dans `objets/converti/<plugin>.yml` et `glyphes/converti/<plugin>.yml`, les images et modèles dans
+`ressources/.../converti/<plugin>/` : tout est relu et ne dépend plus du pack de l'autre plugin. Un objet qui
+existe déjà dans Vorace n'est jamais écrasé (le converti prend un préfixe, par exemple `nexo_rubis`).
+Une nouvelle conversion remplace la précédente : pour garder tes retouches, renomme le fichier.
+Ce qui n'a pas pu être repris est listé dans `conversion/rapport-<plugin>.txt` (et les 5 premiers points en jeu).
+
+Les objets **Nexo et Oraxen déjà dans les inventaires** sont remplacés par leur version Vorace à la connexion
+(ou avec `/vorace maj`), grâce à la table `donnees/conversion-ids.yml`.
+
 ## Installation
 
 1. Mets `Vorace-x.y.z.jar` dans `plugins/` et redémarre le serveur.
@@ -211,8 +238,8 @@ VoraceAPI.ecouterPaquets(this, Sens.SORTANT, p -> {
    Ceux de ModelEngine et MythicMobs sont trouvés tout seuls.
 3. `/vorace reload`, puis reconnecte-toi : le pack est proposé à l'arrivée.
 
-Si tu viens d'un autre plugin qui envoie déjà un pack (Nexo, ItemsAdder, Oraxen...), retire-le ou
-désactive son envoi, sinon les joueurs recevront deux packs.
+Si tu viens d'un autre plugin qui envoie déjà un pack (Nexo, ItemsAdder, Oraxen...), lance `/vorace convertir`,
+puis retire-le ou désactive son envoi, sinon les joueurs recevront deux packs.
 
 ## Commandes
 
@@ -230,6 +257,7 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
 | `/vorace modele [liste\|poser\|anim\|stop\|info\|prive\|public\|sur\|invoquer\|retirer]` | modèles animés |
 | `/vorace paquets [stats\|journal\|ecoutes] [joueur]` | paquets du jeu (débogage) |
+| `/vorace convertir [nexo\|oraxen\|itemsadder\|modelengine\|tout]` | reprend le contenu de ces plugins |
 | `/emojis` | (tous les joueurs) liste des emojis du chat |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
@@ -268,7 +296,7 @@ Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaq
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.7.1") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.0") }
 ```
 
 Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`
@@ -302,7 +330,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 5. ✅ Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
 6. ✅ Modèles animés : import direct des .bbmodel, animations, sur des entités
 7. ✅ Couche paquets (rôle de ProtocolLib), modèles visibles par un seul joueur, API commune et dépendance Maven
-8. Conversion automatique des configurations Nexo, ItemsAdder et ModelEngine
+8. ✅ Conversion automatique des configurations Nexo, Oraxen, ItemsAdder et ModelEngine
 
 ## Licence
 
