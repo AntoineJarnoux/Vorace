@@ -145,9 +145,11 @@ public final class Meubles {
 
     /**
      * Pose un meuble à partir d'un clic droit sur un bloc.
+     * @param objet      l'objet tenu (retiré de la main hors créatif), ou null pour une pose par commande
+     * @param protections demander aux plugins de protection si le joueur peut construire ici
      * @return vrai si le meuble a été posé
      */
-    public boolean poser(Player p, ItemStack objet, DefinitionObjet d, Block clique, BlockFace face, EquipmentSlot main) {
+    public boolean poser(Player p, ItemStack objet, DefinitionObjet d, Block clique, BlockFace face, EquipmentSlot main, boolean protections) {
         DefinitionMeuble m = d.meuble();
         Block origine;
         float yaw;
@@ -191,7 +193,7 @@ public final class Meubles {
         if (depuisOrigine(origine) != null) { refus(p, "Il y a déjà un meuble ici."); return false; }
 
         // protections (WorldGuard, GriefPrevention, claims...) : on demande comme pour un bloc posé
-        for (Block b : blocs.isEmpty() ? List.of(origine) : blocs) {
+        for (Block b : !protections ? List.<Block>of() : blocs.isEmpty() ? List.of(origine) : blocs) {
             BlockPlaceEvent ev = new BlockPlaceEvent(b, b.getState(), clique, objet, p, true, main);
             simulation = true;
             try {
@@ -207,7 +209,7 @@ public final class Meubles {
         if (api.isCancelled()) return false;
 
         creer(d, origine, yaw);
-        if (p.getGameMode() != GameMode.CREATIVE) objet.setAmount(objet.getAmount() - 1);
+        if (objet != null && p.getGameMode() != GameMode.CREATIVE) objet.setAmount(objet.getAmount() - 1);
         if (main == EquipmentSlot.OFF_HAND) p.swingOffHand(); else p.swingMainHand();
         son(pos, m.sonPose());
         return true;

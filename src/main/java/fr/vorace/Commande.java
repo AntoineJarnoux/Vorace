@@ -12,6 +12,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 
@@ -88,7 +90,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace give <joueur> <objet> [quantité]</white> <gray>donne un objet"));
                 s.sendMessage(Messages.brut("<white>/vorace objets</white> <gray>menu de tous les objets"));
                 s.sendMessage(Messages.brut("<white>/vorace maj</white> <gray>met à jour les objets dans les inventaires"));
-                s.sendMessage(Messages.brut("<white>/vorace meuble [liste|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
+                s.sendMessage(Messages.brut("<white>/vorace meuble [liste|poser|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
         }
@@ -117,6 +119,19 @@ public final class Commande implements CommandExecutor, TabCompleter {
         String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
         switch (act) {
             case "rafraichir" -> s.sendMessage(Messages.brut("<green>" + plugin.meubles().rafraichirTout() + " meuble(s) mis à jour."));
+            case "poser" -> {
+                // pose sans passer par les protections (zones où les joueurs ne peuvent pas construire, comme un hub)
+                if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace meuble poser <meuble>  (regarde le bloc où le poser)")); return; }
+                DefinitionObjet d = plugin.objets().definition(a[2].toLowerCase(Locale.ROOT).replace("vorace:", ""));
+                if (d == null || d.meuble() == null) { s.sendMessage(Messages.brut("<red>Meuble inconnu : " + Messages.echapper(a[2]))); return; }
+                Block cible = p.getTargetBlockExact(6);
+                BlockFace face = p.getTargetBlockFace(6);
+                if (cible == null || face == null) { s.sendMessage(Messages.brut("<red>Regarde un bloc à moins de 6 blocs.")); return; }
+                if (plugin.meubles().poser(p, null, d, cible, face, EquipmentSlot.HAND, false)) {
+                    s.sendMessage(Messages.brut("<green>Meuble " + Messages.echapper(d.id()) + " posé. <gray>Pour le retirer : /vorace meuble retirer"));
+                }
+            }
             case "info", "retirer", "supprimer" -> {
                 if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
                 double rayon = 5;
@@ -137,6 +152,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 List<String> ids = new ArrayList<>();
                 for (DefinitionObjet d : plugin.objets().toutes()) if (d.meuble() != null) ids.add(d.id());
                 s.sendMessage(Messages.brut("<gray>" + ids.size() + " meuble(s) : <white>" + Messages.echapper(String.join(", ", ids))));
+                s.sendMessage(Messages.brut("<gray>/vorace meuble poser <meuble> : pose là où tu regardes, même en zone protégée"));
                 s.sendMessage(Messages.brut("<gray>/vorace meuble info|retirer [rayon] : le meuble le plus proche ; /vorace meuble rafraichir"));
             }
         }
@@ -184,7 +200,9 @@ public final class Commande implements CommandExecutor, TabCompleter {
         } else if (a.length == 3 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
             for (DefinitionObjet d : plugin.objets().toutes()) if (d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("meuble") && s.hasPermission("vorace.admin")) {
-            for (String o : List.of("liste", "info", "retirer", "rafraichir")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+            for (String o : List.of("liste", "poser", "info", "retirer", "rafraichir")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("meuble") && a[1].equalsIgnoreCase("poser") && s.hasPermission("vorace.admin")) {
+            for (DefinitionObjet d : plugin.objets().toutes()) if (d.meuble() != null && d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

@@ -84,7 +84,7 @@ chaise:
   (`stockage: 3` lignes, le contenu reste dans le meuble), **commandes** au clic droit, sons, taille, décalage.
 - Rien à configurer côté pack : le meuble utilise le modèle de son objet. Quand tu modifies un meuble,
   ceux déjà posés se mettent à jour.
-- `/vorace meuble` (liste), `/vorace meuble info|retirer [rayon]` (le plus proche), `/vorace meuble rafraichir`.
+- `/vorace meuble` (liste), `/vorace meuble poser <meuble>` (là où tu regardes, même dans une zone où on ne peut pas construire, comme un hub), `/vorace meuble info|retirer [rayon]` (le plus proche), `/vorace meuble rafraichir`.
 - API : `VoraceAPI.poserMeuble(id, bloc, yaw)`, `VoraceAPI.meuble(entite)`, `VoraceAPI.retirerMeuble(entite)`,
   événements `VoraceMeublePoseEvent` et `VoraceMeubleCasseEvent` (annulables).
 
@@ -109,7 +109,7 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace give <joueur> <objet> [quantité]` | donne un objet Vorace |
 | `/vorace objets` | menu de tous les objets (clic = 1, Maj + clic = une pile) |
 | `/vorace maj` | met à jour les objets Vorace dans les inventaires des joueurs connectés |
-| `/vorace meuble [liste\|info\|retirer\|rafraichir]` | gestion des meubles posés |
+| `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
 Permissions : `vorace.admin` (op par défaut), `vorace.pack` (tout le monde).

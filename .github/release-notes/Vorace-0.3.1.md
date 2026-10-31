@@ -1,4 +1,4 @@
-## Vorace 0.3.0 : meubles
+## Vorace 0.3.1 : meubles
 
 Un meuble est un objet Vorace avec une section `meuble:`. Quatre exemples sont créés au démarrage (chaise, lampe, caisse de rangement, grande table), avec leurs recettes.
 
@@ -7,7 +7,7 @@ Un meuble est un objet Vorace avec une section `meuble:`. Quatre exemples sont c
 - **Hitbox** solide sur plusieurs blocs, ou hitbox non solide de la taille voulue (tapis, plantes).
 - **Sièges**, **lumière**, **coffre intégré** (le contenu reste dans le meuble), **commandes** au clic droit, sons, taille, décalage.
 - Les meubles posés se mettent à jour quand tu modifies leur objet.
-- `/vorace meuble [liste|info|retirer|rafraichir]`.
+- `/vorace meuble [liste|poser|info|retirer|rafraichir]` ; `poser` pose le meuble que tu regardes même dans une zone où on ne peut pas construire (hub).
 - API : `VoraceAPI.poserMeuble`, `VoraceAPI.meuble`, `VoraceAPI.retirerMeuble`, événements `VoraceMeublePoseEvent` et `VoraceMeubleCasseEvent`.
 
 Rien à changer dans tes fichiers : remplace le .jar et redémarre. Le fichier `objets/exemple-meubles.yml` et ses modèles sont ajoutés une seule fois (supprime-les si tu n'en veux pas, ils ne reviendront pas).

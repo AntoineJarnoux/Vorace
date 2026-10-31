@@ -81,7 +81,7 @@ public final class EcouteurMeubles implements Listener {
         e.setCancelled(true);
         if (dejaFait(p)) return;
         EquipmentSlot main = e.getHand() == null ? EquipmentSlot.HAND : e.getHand();
-        meubles().poser(p, objet, d, b, e.getBlockFace(), main);
+        meubles().poser(p, objet, d, b, e.getBlockFace(), main, true);
     }
 
     @EventHandler(priority = EventPriority.NORMAL)
