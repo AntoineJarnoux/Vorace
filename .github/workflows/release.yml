@@ -1,9 +1,9 @@
 name: Release
 
-# Pousser un tag "v0.2.0" compile le plugin et publie la release avec le .jar.
+# Quand une release est publiée sur GitHub, le plugin est compilé et le .jar y est ajouté.
 on:
-  push:
-    tags: ["v*"]
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -24,10 +24,7 @@ jobs:
           gradle-version: "9.2.0"
       - name: Compiler et tester
         run: gradle build tests
-      - name: Publier la release
+      - name: Ajouter le .jar à la release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          NOTES=".github/release-notes/${GITHUB_REF_NAME}.md"
-          if [ -f "$NOTES" ]; then ARGS=(--notes-file "$NOTES"); else ARGS=(--generate-notes); fi
-          gh release create "$GITHUB_REF_NAME" build/libs/Vorace-*.jar --title "Vorace ${GITHUB_REF_NAME#v}" "${ARGS[@]}"
+        run: gh release upload "${{ github.event.release.tag_name }}" build/libs/Vorace-*.jar --clobber
