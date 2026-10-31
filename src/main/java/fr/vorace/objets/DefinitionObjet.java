@@ -1,5 +1,6 @@
 package fr.vorace.objets;
 
+import fr.vorace.blocs.DefinitionBloc;
 import fr.vorace.meubles.DefinitionMeuble;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -17,7 +18,7 @@ public record DefinitionObjet(
     Map<String, Integer> enchantements, Boolean brillance, boolean incassable, List<String> cacher,
     Integer couleur, List<Attribut> attributs, Integer taillePile, Integer durabilite, Integer cmdFixe,
     List<String> commandesDroit, List<String> commandesGauche, boolean consommer, int delaiTicks, String messageDelai,
-    Recette recette, DefinitionMeuble meuble
+    Recette recette, DefinitionMeuble meuble, DefinitionBloc bloc
 ) {
 
     public static final Pattern ID_VALIDE = Pattern.compile("[a-z0-9_.\\-/]+");
@@ -87,7 +88,8 @@ public record DefinitionObjet(
             s.contains("custom-model-data") ? s.getInt("custom-model-data", 0) : null,
             droit, gauche, sc != null && sc.getBoolean("consommer", false), sc == null ? 0 : sc.getInt("delai-ticks", 0),
             sc == null ? null : sc.getString("message-delai"),
-            recette, s.isConfigurationSection("meuble") ? DefinitionMeuble.lire(id, s.getConfigurationSection("meuble"), problemes) : null);
+            recette, s.isConfigurationSection("meuble") ? DefinitionMeuble.lire(id, s.getConfigurationSection("meuble"), problemes) : null,
+            s.isConfigurationSection("bloc") ? DefinitionBloc.lire(id, s.getConfigurationSection("bloc"), problemes) : null);
     }
 
     private static String nettoyer(String chemin) {
@@ -97,6 +99,11 @@ public record DefinitionObjet(
         if (c.endsWith(".json")) c = c.substring(0, c.length() - 5);
         while (c.startsWith("/")) c = c.substring(1);
         return c;
+    }
+
+    /** L'objet a une apparence à lui dans le pack (image, modèle ou bloc). */
+    public boolean aUnVisuel() {
+        return texture != null || modele != null || bloc != null;
     }
 
     public boolean aDesCommandes() {

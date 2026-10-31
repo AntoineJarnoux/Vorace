@@ -64,6 +64,9 @@ public final class GenerateurPack {
                 JsonObject tex = new JsonObject();
                 tex.addProperty("layer0", NS + ":item/" + v.texture());
                 modele.add("textures", tex);
+            } else if (v.parent() != null) {
+                modele = new JsonObject();
+                modele.addProperty("parent", v.parent());
             } else {
                 continue; // objet sans apparence propre : il garde celle de son objet de base
             }
@@ -118,7 +121,7 @@ public final class GenerateurPack {
      * "minecraft:item/epee"...). Si une texture du même nom existe dans ressources/textures, on la relie à
      * "vorace:item/..." et on la copie dans le pack. Les textures du jeu de base restent telles quelles.
      */
-    static void remapperTextures(JsonObject modele, Path textures, Map<String, byte[]> sortie, Journal journal, String id) {
+    public static void remapperTextures(JsonObject modele, Path textures, Map<String, byte[]> sortie, Journal journal, String id) {
         if (!modele.has("textures") || !modele.get("textures").isJsonObject()) return;
         JsonObject t = modele.getAsJsonObject("textures");
         for (Map.Entry<String, JsonElement> e : new LinkedHashMap<>(asMap(t)).entrySet()) {
@@ -157,7 +160,7 @@ public final class GenerateurPack {
         return m;
     }
 
-    private static boolean copierTexture(String chemin, Path textures, Map<String, byte[]> sortie) {
+    public static boolean copierTexture(String chemin, Path textures, Map<String, byte[]> sortie) {
         Path png = textures.resolve(chemin + ".png");
         if (!Files.isRegularFile(png)) return false;
         try {
@@ -170,7 +173,7 @@ public final class GenerateurPack {
         }
     }
 
-    private static JsonElement lire(Path f) {
+    public static JsonElement lire(Path f) {
         try {
             return Files.isRegularFile(f) ? Fusion.lireJson(Files.readAllBytes(f)) : null;
         } catch (IOException e) {

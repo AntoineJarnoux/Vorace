@@ -61,6 +61,13 @@ objets:
   # Quand tu modifies un objet, ceux déjà dans les inventaires sont mis à jour à la connexion.
   mise-a-jour-auto: true
 
+blocs:
+  # Les blocs personnalisés sont des blocs à note. Paper peut les empêcher de changer d'instrument quand
+  # un bloc voisin change (block-updates.disable-noteblock-updates dans config/paper-global.yml).
+  # Si true, Vorace active ce réglage tout seul la première fois (redémarrage nécessaire une fois).
+  # Sans ce réglage, Vorace corrige les blocs lui-même, mais un bloc peut clignoter.
+  reglage-paper-auto: true
+
 surveillance:
   # Reconstruit le pack tout seul quand un pack source ou un objet change (par exemple après /meg reload).
   actif: true

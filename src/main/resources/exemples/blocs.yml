@@ -1,0 +1,56 @@
+# ============================================================
+#  Blocs Vorace - exemples (tu peux modifier ou supprimer ce fichier)
+#  Un bloc est un objet Vorace avec une section « bloc: ». Clic droit pour le poser,
+#  il se mine comme un vrai bloc (vitesse selon l'outil, fissures, butin, expérience).
+#
+#  Toutes les options de « bloc: » :
+#    textures: chemin                  une image pour les 6 faces (ressources/textures/chemin.png)
+#    textures: { haut: a, bas: b, cotes: c }   (ou nord, sud, est, ouest)
+#    modele: chemin                    ou un modèle Blockbench de bloc plein (ressources/modeles/)
+#    durete: 3                         comme dans le jeu : terre 0.5, pierre 1.5, minerai de fer 3, obsidienne 50
+#    outil: pioche                     pioche, hache, pelle, houe, epee, cisailles ou aucun
+#    niveau: fer                       outil minimum pour avoir le butin : bois, pierre, fer, diamant, netherite
+#    butin: ["vorace:rubis 1-2"]       objet, quantité (ou intervalle), chance en % ; vide = le bloc lui-même
+#    fortune: true                     Fortune multiplie le butin
+#    toucher-de-soie: true             Toucher de soie rend le bloc lui-même
+#    experience: "3-7"
+#    son-pose / son-casse              sons du jeu (ex. block.stone.place)
+#    generation:                       filons dans les NOUVEAUX chunks
+#      mondes: [world]                 vide = tous les mondes normaux
+#      hauteur: "-64, 32"
+#      filons: 4                       par chunk
+#      taille: 5                       blocs par filon
+#      remplace: [STONE, DEEPSLATE]
+#  550 blocs personnalisés possibles.
+# ============================================================
+
+minerai_rubis:
+  materiau: PAPER
+  nom: "<#e8284a>Minerai de rubis"
+  bloc:
+    textures: exemple/minerai_rubis
+    durete: 3
+    outil: pioche
+    niveau: fer
+    butin: ["vorace:rubis 1-2"]
+    experience: "3-7"
+    generation:
+      mondes: [world]
+      hauteur: "-64, 32"
+      filons: 4
+      taille: 5
+
+bloc_rubis:
+  materiau: PAPER
+  nom: "<#e8284a>Bloc de rubis"
+  bloc:
+    textures: exemple/bloc_rubis
+    durete: 5
+    outil: pioche
+    niveau: fer
+    son-pose: block.metal.place
+    son-casse: block.metal.break
+  recette:
+    type: forme
+    forme: ["RRR", "RRR", "RRR"]
+    ingredients: { R: "vorace:rubis" }

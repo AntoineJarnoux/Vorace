@@ -10,5 +10,10 @@ package fr.vorace.objets;
  * @param enMain   modèle plat tenu comme une épée (item/handheld) au lieu de item/generated
  * @param cmd      numéro custom_model_data (utilisé seulement avant 1.21.2)
  * @param teinte   couleur par défaut si l'objet est teintable (cuir), ou null
+ * @param parent   modèle déjà fourni ailleurs (ex. « vorace:block/minerai » pour un bloc), ou null
  */
-public record Visuel(String id, String materiau, String texture, String modele, boolean enMain, int cmd, Integer teinte) {}
+public record Visuel(String id, String materiau, String texture, String modele, boolean enMain, int cmd, Integer teinte, String parent) {
+    public Visuel(String id, String materiau, String texture, String modele, boolean enMain, int cmd, Integer teinte) {
+        this(id, materiau, texture, modele, enMain, cmd, teinte, null);
+    }
+}

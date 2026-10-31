@@ -79,6 +79,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<green>" + n + " objet(s) mis à jour dans les inventaires."));
             }
             case "meuble", "meubles" -> meuble(s, a);
+            case "bloc", "blocs" -> bloc(s, a);
             case "info" -> info(s);
             case "sources" -> sources(s);
             default -> {
@@ -91,6 +92,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace objets</white> <gray>menu de tous les objets"));
                 s.sendMessage(Messages.brut("<white>/vorace maj</white> <gray>met à jour les objets dans les inventaires"));
                 s.sendMessage(Messages.brut("<white>/vorace meuble [liste|poser|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
+                s.sendMessage(Messages.brut("<white>/vorace bloc [liste|poser|casser|info]</white> <gray>blocs personnalisés"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
         }
@@ -158,6 +160,48 @@ public final class Commande implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void bloc(CommandSender s, String[] a) {
+        String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
+        switch (act) {
+            case "poser" -> {
+                // pose sans passer par les protections (zones où les joueurs ne peuvent pas construire)
+                if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace bloc poser <bloc>  (regarde où le poser)")); return; }
+                DefinitionObjet d = plugin.objets().definition(a[2].toLowerCase(Locale.ROOT).replace("vorace:", ""));
+                if (d == null || d.bloc() == null) { s.sendMessage(Messages.brut("<red>Bloc inconnu : " + Messages.echapper(a[2]))); return; }
+                Block cible = p.getTargetBlockExact(6);
+                BlockFace face = p.getTargetBlockFace(6);
+                if (cible == null || face == null) { s.sendMessage(Messages.brut("<red>Regarde un bloc à moins de 6 blocs.")); return; }
+                Block ou = cible.isReplaceable() ? cible : cible.getRelative(face);
+                if (!ou.isReplaceable()) { s.sendMessage(Messages.brut("<red>Pas de place ici.")); return; }
+                plugin.blocs().placer(ou, d.id());
+                s.sendMessage(Messages.brut("<green>Bloc " + Messages.echapper(d.id()) + " posé."));
+            }
+            case "casser" -> {
+                // casse avec l'outil en main (butin, Fortune, Toucher de soie), même en zone protégée
+                if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+                Block cible = p.getTargetBlockExact(6);
+                DefinitionObjet d = plugin.blocs().definition(cible);
+                if (d == null) { s.sendMessage(Messages.brut("<yellow>Regarde un bloc Vorace à moins de 6 blocs.")); return; }
+                plugin.blocs().casserPar(p, cible, d, false);
+                s.sendMessage(Messages.brut("<green>Bloc " + Messages.echapper(d.id()) + " cassé avec l'objet en main."));
+            }
+            case "info" -> {
+                if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+                Block cible = p.getTargetBlockExact(6);
+                String id = plugin.blocs().id(cible);
+                s.sendMessage(Messages.brut(id == null ? "<yellow>Ce n'est pas un bloc Vorace." : "<gray>Bloc Vorace : <white>" + Messages.echapper(id)
+                    + "</white> <gray>(état " + Messages.echapper(cible.getBlockData().getAsString()) + ")"));
+            }
+            default -> {
+                List<String> ids = new ArrayList<>();
+                for (DefinitionObjet d : plugin.objets().toutes()) if (d.bloc() != null) ids.add(d.id());
+                s.sendMessage(Messages.brut("<gray>" + ids.size() + " bloc(s) : <white>" + Messages.echapper(String.join(", ", ids))));
+                s.sendMessage(Messages.brut("<gray>/vorace bloc poser <bloc> / casser : là où tu regardes, même en zone protégée ; /vorace bloc info"));
+            }
+        }
+    }
+
     private void info(CommandSender s) {
         Constructeur.Resultat r = plugin.packs().actuel();
         s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion() + " <gray>- " + plugin.objets().toutes().size() + " objet(s)"));
@@ -191,7 +235,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         List<String> r = new ArrayList<>();
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "envoyer", "maj", "info", "sources", "pack") : List.of("pack")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "envoyer", "maj", "info", "sources", "pack") : List.of("pack")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
@@ -203,6 +247,10 @@ public final class Commande implements CommandExecutor, TabCompleter {
             for (String o : List.of("liste", "poser", "info", "retirer", "rafraichir")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 3 && a[0].equalsIgnoreCase("meuble") && a[1].equalsIgnoreCase("poser") && s.hasPermission("vorace.admin")) {
             for (DefinitionObjet d : plugin.objets().toutes()) if (d.meuble() != null && d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("bloc") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("liste", "poser", "casser", "info")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("bloc") && a[1].equalsIgnoreCase("poser") && s.hasPermission("vorace.admin")) {
+            for (DefinitionObjet d : plugin.objets().toutes()) if (d.bloc() != null && d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

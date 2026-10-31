@@ -7,6 +7,8 @@ import fr.vorace.hebergement.Hebergeur;
 import fr.vorace.hebergement.HebergeurExterne;
 import fr.vorace.hebergement.HebergeurMemePort;
 import fr.vorace.hebergement.HebergeurPortDedie;
+import fr.vorace.blocs.Blocs;
+import fr.vorace.blocs.EcouteurBlocs;
 import fr.vorace.meubles.EcouteurMeubles;
 import fr.vorace.meubles.Meubles;
 import fr.vorace.objets.EcouteurObjets;
@@ -42,6 +44,7 @@ public final class Vorace extends JavaPlugin {
     private Objets objets;
     private EcouteurObjets ecouteurObjets;
     private Meubles meubles;
+    private Blocs blocs;
     private volatile String testHebergement;
 
     public Reglages reglages() { return reglages; }
@@ -51,6 +54,7 @@ public final class Vorace extends JavaPlugin {
     public Objets objets() { return objets; }
     public EcouteurObjets ecouteurObjets() { return ecouteurObjets; }
     public Meubles meubles() { return meubles; }
+    public Blocs blocs() { return blocs; }
     public String testHebergement() { return testHebergement; }
 
     @Override
@@ -85,6 +89,14 @@ public final class Vorace extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les meubles", t);
         }
+        try {
+            blocs = new Blocs(this);
+            Bukkit.getPluginManager().registerEvents(new EcouteurBlocs(this), this);
+            blocs.demarrer();
+            blocs.reglerPaper();
+        } catch (Throwable t) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les blocs", t);
+        }
 
         PluginCommand cmd = getCommand("vorace");
         if (cmd != null) {
@@ -111,6 +123,9 @@ public final class Vorace extends JavaPlugin {
     @Override
     public void onDisable() {
         if (surveillance != null) surveillance.arreter();
+        if (blocs != null) {
+            try { blocs.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des blocs : " + t); }
+        }
         if (meubles != null) {
             try { meubles.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des meubles : " + t); }
         }

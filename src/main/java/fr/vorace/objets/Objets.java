@@ -2,6 +2,8 @@ package fr.vorace.objets;
 
 import fr.vorace.Messages;
 import fr.vorace.Vorace;
+import fr.vorace.blocs.EtatsNoteBlock;
+import fr.vorace.blocs.GenerateurBlocs;
 import fr.vorace.pack.FormatPack;
 import fr.vorace.pack.Journal;
 import net.kyori.adventure.text.Component;
@@ -50,6 +52,8 @@ public final class Objets {
     private final NamespacedKey cleVersion;
     private volatile Map<String, DefinitionObjet> definitions = Map.of();
     private final Map<String, Integer> cmdAttribues = new LinkedHashMap<>();
+    private final Map<String, Integer> numerosBlocs = new LinkedHashMap<>();
+    private volatile Map<String, String> blocParEtat = Map.of();
     private final List<NamespacedKey> recettes = new ArrayList<>();
     private Method setItemModel;
     private boolean itemModelCherche;
@@ -98,6 +102,7 @@ public final class Objets {
         definitions = lues;
         for (DefinitionObjet d : lues.values()) cmd(d);
         sauverCmd();
+        attribuerNumerosBlocs(lues.values(), problemes);
         problemes.forEach(m -> plugin.getLogger().warning("Objets : " + m));
         plugin.getLogger().info(lues.size() + " objet(s) chargé(s) depuis " + fichiers.size() + " fichier(s)");
         if (avecRecettes) enregistrerRecettes();
@@ -106,11 +111,76 @@ public final class Objets {
     /** Fichiers pour le pack (appelé hors du fil principal pendant la construction). */
     public Map<String, byte[]> fichiersPack(FormatPack format, Journal journal) {
         List<Visuel> visuels = new ArrayList<>();
+        List<GenerateurBlocs.Apparence> blocs = new ArrayList<>();
         for (DefinitionObjet d : definitions.values()) {
             Integer teinte = d.couleur() != null && d.materiau().startsWith("leather_") ? (0xFF000000 | d.couleur()) : null;
-            visuels.add(new Visuel(d.id(), materiauValide(d).name().toLowerCase(Locale.ROOT), d.texture(), d.modele(), d.enMain(), cmd(d), teinte));
+            Integer numero = d.bloc() == null ? null : numeroBloc(d.id());
+            String parent = numero != null && d.texture() == null && d.modele() == null ? GenerateurPack.NS + ":block/" + d.id() : null;
+            visuels.add(new Visuel(d.id(), materiauValide(d).name().toLowerCase(Locale.ROOT), d.texture(), d.modele(), d.enMain(), cmd(d), teinte, parent));
+            if (numero != null) blocs.add(new GenerateurBlocs.Apparence(d.id(), numero, d.bloc().faces(), d.bloc().modele()));
         }
-        return GenerateurPack.generer(visuels, dossierRessources(), format, journal);
+        Map<String, byte[]> fichiers = new java.util.TreeMap<>(GenerateurPack.generer(visuels, dossierRessources(), format, journal));
+        fichiers.putAll(GenerateurBlocs.generer(blocs, dossierRessources(), journal));
+        return fichiers;
+    }
+
+    // ----------------------------------------------------------------- blocs
+
+    /** Numéro d'état du bloc personnalisé (voir EtatsNoteBlock), ou null. */
+    public synchronized Integer numeroBloc(String id) {
+        return numerosBlocs.get(id);
+    }
+
+    /** Identifiant du bloc personnalisé qui utilise cet état (« instrument=x,note=n »), ou null. */
+    public String idDepuisEtat(String cle) {
+        return cle == null ? null : blocParEtat.get(cle);
+    }
+
+    /** Les numéros sont gardés d'un redémarrage à l'autre (donnees/blocs.txt) : un bloc posé garde son apparence. */
+    private synchronized void attribuerNumerosBlocs(Collection<DefinitionObjet> defs, List<String> problemes) {
+        Path f = plugin.getDataFolder().toPath().resolve("donnees").resolve("blocs.txt");
+        numerosBlocs.clear();
+        try {
+            if (Files.isRegularFile(f)) {
+                for (String l : Files.readAllLines(f)) {
+                    String[] p = l.trim().split("\\s+", 2);
+                    if (p.length == 2 && !p[0].startsWith("#")) {
+                        try { numerosBlocs.put(p[1], Integer.parseInt(p[0])); } catch (NumberFormatException ignore) { }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            plugin.getLogger().warning("Impossible de lire donnees/blocs.txt : " + e.getMessage());
+        }
+        boolean change = false;
+        for (DefinitionObjet d : defs) {
+            if (d.bloc() == null || numerosBlocs.containsKey(d.id())) continue;
+            java.util.Set<Integer> pris = new java.util.HashSet<>(numerosBlocs.values());
+            int n = 0;
+            while (pris.contains(n)) n++;
+            if (n >= EtatsNoteBlock.CAPACITE) {
+                problemes.add(d.id() + " : trop de blocs personnalisés (" + EtatsNoteBlock.CAPACITE + " au maximum)");
+                continue;
+            }
+            numerosBlocs.put(d.id(), n);
+            change = true;
+        }
+        Map<String, String> parEtat = new java.util.HashMap<>();
+        for (DefinitionObjet d : defs) {
+            Integer n = d.bloc() == null ? null : numerosBlocs.get(d.id());
+            if (n != null && n >= 0 && n < EtatsNoteBlock.CAPACITE) parEtat.put(EtatsNoteBlock.etat(n), d.id());
+        }
+        blocParEtat = parEtat;
+        if (change) {
+            try {
+                Files.createDirectories(f.getParent());
+                List<String> lignes = new ArrayList<>(List.of("# numéro d'état -> bloc Vorace (ne pas modifier : les blocs posés changeraient d'apparence)"));
+                numerosBlocs.forEach((id, n) -> lignes.add(n + " " + id));
+                Files.write(f, lignes);
+            } catch (IOException e) {
+                plugin.getLogger().warning("Impossible d'enregistrer donnees/blocs.txt : " + e.getMessage());
+            }
+        }
     }
 
     // ----------------------------------------------------------------- objets
@@ -133,7 +203,7 @@ public final class Objets {
         meta.getPersistentDataContainer().set(cleId, PersistentDataType.STRING, d.id());
         meta.getPersistentDataContainer().set(cleVersion, PersistentDataType.STRING, Integer.toHexString(d.hashCode()));
 
-        if (d.texture() != null || d.modele() != null) {
+        if (d.aUnVisuel()) {
             FormatPack f = plugin.packs().format();
             if (f != null && f.majeur() >= 42 && appliquerItemModel(meta, d.id())) {
                 // composant item_model : rien d'autre à faire
@@ -437,6 +507,14 @@ public final class Objets {
                     copier("exemples/meubles/" + t + ".png", dossierRessources().resolve("textures/exemple/" + t + ".png"));
                 }
                 faits.add("meubles");
+                change = true;
+            }
+            if (!faits.contains("blocs")) {
+                copier("exemples/blocs.yml", dossierObjets().resolve("exemple-blocs.yml"));
+                for (String t : List.of("minerai_rubis", "bloc_rubis")) {
+                    copier("exemples/blocs/" + t + ".png", dossierRessources().resolve("textures/exemple/" + t + ".png"));
+                }
+                faits.add("blocs");
                 change = true;
             }
             // modèles d'exemple de la 0.3.0 (textures abîmées sur la chaise et la table) : remplacés s'ils n'ont pas été modifiés

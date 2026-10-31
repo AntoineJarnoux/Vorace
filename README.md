@@ -88,6 +88,37 @@ chaise:
 - API : `VoraceAPI.poserMeuble(id, bloc, yaw)`, `VoraceAPI.meuble(entite)`, `VoraceAPI.retirerMeuble(entite)`,
   événements `VoraceMeublePoseEvent` et `VoraceMeubleCasseEvent` (annulables).
 
+### Blocs (0.4)
+
+Un bloc est un objet Vorace avec une section `bloc:` (exemples créés au premier démarrage :
+minerai de rubis et bloc de rubis) :
+
+```yaml
+minerai_rubis:
+  materiau: PAPER
+  nom: "<#e8284a>Minerai de rubis"
+  bloc:
+    textures: exemple/minerai_rubis     # ou { haut: a, bas: b, cotes: c }, ou modele: <Blockbench>
+    durete: 3                           # comme dans le jeu (pierre 1.5, obsidienne 50)
+    outil: pioche
+    niveau: fer                         # outil minimum pour avoir le butin
+    butin: ["vorace:rubis 1-2"]         # objet, quantité, chance en %
+    experience: "3-7"
+    generation: { mondes: [world], hauteur: "-64, 32", filons: 4, taille: 5 }
+```
+
+- **Vrais blocs pleins** : 550 blocs possibles, sans entité, aussi légers qu'un bloc du jeu. L'objet en main montre le bloc en 3D.
+- **Minage calculé par le serveur** : vitesse selon l'outil, Efficacité, Célérité et Fatigue, fissures visibles par tous.
+  Butin avec Fortune et Toucher de soie, expérience, usure de l'outil. Les protections sont respectées.
+- Un signal de redstone, un piston, une explosion ou un bloc posé au-dessus ne change jamais son apparence.
+  Vorace active tout seul le réglage Paper `block-updates.disable-noteblock-updates` (prend effet au redémarrage suivant).
+- **Génération** de filons dans les nouveaux chunks.
+- `/vorace bloc` (liste), `/vorace bloc poser <bloc>` et `/vorace bloc casser` (là où tu regardes, même en zone protégée), `/vorace bloc info`.
+- API : `VoraceAPI.bloc(bloc)`, `VoraceAPI.poserBloc(id, bloc)`, événement `VoraceBlocCasseEvent` (butin modifiable, annulable).
+
+Limite connue (la même qu'avec les autres plugins de blocs) : les blocs Vorace utilisent les états du bloc à note.
+Avec le réglage Paper activé, les blocs à note normaux ne changent plus d'instrument selon le bloc posé dessous.
+
 ## Installation
 
 1. Mets `Vorace-x.y.z.jar` dans `plugins/` et redémarre le serveur.
@@ -110,6 +141,7 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace objets` | menu de tous les objets (clic = 1, Maj + clic = une pile) |
 | `/vorace maj` | met à jour les objets Vorace dans les inventaires des joueurs connectés |
 | `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
+| `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
 Permissions : `vorace.admin` (op par défaut), `vorace.pack` (tout le monde).
@@ -165,7 +197,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 1. ✅ Packs : fusion, hébergement, envoi
 2. ✅ Objets personnalisés (texture ou modèle 3D, propriétés, actions au clic, recettes)
 3. ✅ Meubles (modèles 3D posables, hitbox, sièges, lumières, coffres)
-4. Blocs personnalisés (minerais, décorations, avec outils, vitesse de minage et drops)
+4. ✅ Blocs personnalisés (minerais, décorations, avec outils, vitesse de minage et drops)
 5. Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
 6. Modèles animés : import direct des .bbmodel, animations, sur des entités
 7. Paquets et bibliothèque commune (entités visibles par un seul joueur, API pour VoraceMMO)

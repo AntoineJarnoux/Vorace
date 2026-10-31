@@ -60,4 +60,16 @@ public final class VoraceAPI {
         ItemDisplay d = plugin.meubles().depuisEntite(e);
         return d != null && plugin.meubles().casser(null, d, false);
     }
+
+    /** Identifiant du bloc Vorace à cet endroit, ou null. */
+    public static String bloc(Block b) {
+        return plugin == null || plugin.blocs() == null ? null : plugin.blocs().id(b);
+    }
+
+    /** Pose un bloc Vorace sans vérification. Faux si ce n'est pas un bloc. */
+    public static boolean poserBloc(String id, Block b) {
+        if (plugin == null || plugin.blocs() == null) return false;
+        DefinitionObjet d = plugin.objets().definition(id);
+        return d != null && d.bloc() != null && plugin.blocs().placer(b, id);
+    }
 }
