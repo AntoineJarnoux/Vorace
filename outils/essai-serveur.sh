@@ -40,7 +40,7 @@ attendre() { # attendre <motif> <fichier> <secondes>
 }
 if ! attendre 'Done (' journal.txt 400; then echo "Le serveur n'a pas démarré"; tail -80 journal.txt; exit 1; fi
 cmd "vorace modele"
-node "$OUTILS/essai-bot.mjs" 30 $CLIENT > bot.txt 2>&1 &
+node "$OUTILS/essai-bot.mjs" 40 $CLIENT > bot.txt 2>&1 &
 BOT=$!
 attendre 'BOT CONNECTE' bot.txt 60 || { echo "Le faux joueur ne s'est pas connecté"; cat bot.txt; }
 sleep 2
@@ -58,13 +58,17 @@ sleep 2
 cmd "vorace modele stop"
 sleep 1
 cmd "vorace modele info"
+# couche paquets : heure remplacée par midi, un message bloqué, un autre qui passe
+cmd "gamerule doDaylightCycle false"
+cmd "time set 18000"
+cmd "vorace paquets essai"
 wait $BOT
 cmd "stop"
 for _ in $(seq 1 60); do kill -0 $SERVEUR 2>/dev/null || break; sleep 1; done
 kill $SERVEUR 2>/dev/null
 
 echo "===== Faux joueur"; cat bot.txt
-echo "===== Console (Vorace)"; grep -aiE 'vorace|modèle|empreinte|animation|exception|error|at fr\.' journal.txt | grep -v 'Loading server plugin' | head -150
+echo "===== Console (Vorace)"; grep -aiE 'vorace|modèle|empreinte|animation|paquets|exception|error|at fr\.' journal.txt | grep -v 'Loading server plugin' | head -150
 echo "===== Fin du journal"; tail -30 journal.txt
 
 # verdict
@@ -75,4 +79,8 @@ ERREURS=$(grep -acE 'ERROR\]: \[Vorace\]|at fr\.vorace\.' journal.txt)
 echo "erreurs de Vorace dans la console : $ERREURS"
 if [ "$ERREURS" -gt 0 ]; then echo "ECHEC : erreurs de Vorace dans la console"; exit 1; fi
 if [ "$EMPREINTES" -lt 3 ] || [ "${DISTINCTES:-0}" -lt 50 ]; then echo "ECHEC : les modèles ne s'animent pas"; exit 1; fi
+grep -aq 'ESSAI PAQUETS heures-modifiees=[1-9][0-9]* messages-bloques=[1-9][0-9]* paquets-recus=[1-9][0-9]* erreurs=0' journal.txt || { echo "ECHEC : couche paquets (côté serveur)"; exit 1; }
+grep -aq 'VORACE-LIBRE' bot.txt || { echo "ECHEC : le message libre n'est pas arrivé au joueur"; exit 1; }
+if grep -aq 'VORACE-BLOQUE' bot.txt; then echo "ECHEC : le message bloqué est arrivé au joueur"; exit 1; fi
+grep -aqE 'BOT HEURES.* 6000( |$)|BOT HEURES 6000( |$)' bot.txt || { echo "ECHEC : l'heure reçue par le joueur n'a pas été remplacée par midi"; exit 1; }
 echo "ESSAI REUSSI"

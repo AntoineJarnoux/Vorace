@@ -23,6 +23,12 @@ public final class EcouteurModeles implements Listener {
 
     private Modeles modeles() { return plugin.modeles(); }
 
+    /** Un joueur qui revient revoit les modèles privés qui lui sont montrés. */
+    @EventHandler
+    public void arrivee(org.bukkit.event.player.PlayerJoinEvent e) {
+        for (Modeles.Instance i : modeles().instances()) if (i.prive() && i.voit(e.getPlayer().getUniqueId())) i.appliquerVisibilite();
+    }
+
     @EventHandler
     public void chargement(EntitiesLoadEvent e) {
         modeles().charger(e.getEntities());

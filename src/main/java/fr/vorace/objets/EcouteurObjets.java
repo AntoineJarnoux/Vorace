@@ -49,6 +49,10 @@ public final class EcouteurObjets implements Listener {
         e.setCancelled(true);
 
         Player p = e.getPlayer();
+        fr.vorace.api.VoraceObjetUtiliseEvent api = new fr.vorace.api.VoraceObjetUtiliseEvent(p, id, objet, droit, commandes);
+        org.bukkit.Bukkit.getPluginManager().callEvent(api);
+        if (api.isCancelled()) return;
+        commandes = api.getCommandes();
         if (d.delaiTicks() > 0) {
             String cle = p.getUniqueId() + ":" + id;
             long maintenant = System.currentTimeMillis();

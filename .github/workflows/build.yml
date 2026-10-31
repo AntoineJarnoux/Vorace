@@ -26,6 +26,11 @@ jobs:
           gradle-version: "9.2.0"
       - name: Compiler et tester
         run: gradle build tests -PpaperApi="${{ matrix.paper }}"
+      - name: Publication comme JitPack (dépendance pour les autres plugins)
+        if: matrix.paper == '1.21.1-R0.1-SNAPSHOT'
+        run: |
+          gradle publishToMavenLocal -Pjdk=21 -PpaperApi="${{ matrix.paper }}"
+          ls -R ~/.m2/repository/com/github/ORA-KUN/Vorace/
       - name: Garder le .jar
         if: matrix.paper == '1.21.1-R0.1-SNAPSHOT'
         uses: actions/upload-artifact@v4

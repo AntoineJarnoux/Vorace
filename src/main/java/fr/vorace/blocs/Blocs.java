@@ -197,6 +197,12 @@ public final class Blocs {
             avant.update(true, false);
             return false;
         }
+        fr.vorace.api.VoraceBlocPoseEvent api = new fr.vorace.api.VoraceBlocPoseEvent(p, d.id(), cible);
+        Bukkit.getPluginManager().callEvent(api);
+        if (api.isCancelled()) {
+            avant.update(true, false);
+            return false;
+        }
         enregistrer(cible, d.id());
         if (p.getGameMode() != GameMode.CREATIVE) objet.setAmount(objet.getAmount() - 1);
         if (main == EquipmentSlot.OFF_HAND) p.swingOffHand(); else p.swingMainHand();

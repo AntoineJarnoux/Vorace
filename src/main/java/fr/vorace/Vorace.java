@@ -51,6 +51,7 @@ public final class Vorace extends JavaPlugin {
     private Blocs blocs;
     private Glyphes glyphes;
     private Modeles modeles;
+    private fr.vorace.paquets.Paquets paquets;
     private volatile String testHebergement;
 
     public Reglages reglages() { return reglages; }
@@ -63,6 +64,8 @@ public final class Vorace extends JavaPlugin {
     public Blocs blocs() { return blocs; }
     public Glyphes glyphes() { return glyphes; }
     public Modeles modeles() { return modeles; }
+    /** Couche paquets, ou null si désactivée (config « paquets.actif »). */
+    public fr.vorace.paquets.Paquets paquets() { return paquets; }
     public String testHebergement() { return testHebergement; }
 
     @Override
@@ -127,6 +130,16 @@ public final class Vorace extends JavaPlugin {
                 getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les modèles animés", t);
             }
         }
+        if (getConfig().getBoolean("paquets.actif", true)) {
+            try {
+                paquets = new fr.vorace.paquets.Paquets(this);
+                Bukkit.getPluginManager().registerEvents(paquets, this);
+                paquets.demarrer();
+            } catch (Throwable t) {
+                paquets = null;
+                getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer la couche paquets", t);
+            }
+        }
         try {
             Bukkit.getPluginManager().registerEvents(new EcouteurGlyphes(this), this);
         } catch (Throwable t) {
@@ -169,6 +182,9 @@ public final class Vorace extends JavaPlugin {
     @Override
     public void onDisable() {
         if (surveillance != null) surveillance.arreter();
+        if (paquets != null) {
+            try { paquets.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt de la couche paquets : " + t); }
+        }
         if (modeles != null) {
             try { modeles.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des modèles animés : " + t); }
         }

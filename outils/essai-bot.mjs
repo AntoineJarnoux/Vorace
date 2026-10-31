@@ -42,9 +42,13 @@ bot.once('spawn', () => {
     const parSeconde = {};
     for (const t of chronologie) { const s = Math.floor(Number(t)); parSeconde[s] = (parSeconde[s] || 0) + 1; }
     console.log('BOT CHRONOLOGIE ' + JSON.stringify(parSeconde));
+    console.log('BOT HEURES ' + [...heures].join(' '));
     bot.quit();
     setTimeout(() => process.exit(0), 500);
   }, duree);
 });
+const heures = new Set();
+bot.on('time', () => heures.add(bot.time.timeOfDay));
+bot.on('message', (m) => console.log('BOT MESSAGE ' + m.toString()));
 bot.on('kicked', (r) => console.log('BOT EXPULSE ' + JSON.stringify(r)));
 bot.on('error', (e) => console.log('BOT ERREUR ' + e));

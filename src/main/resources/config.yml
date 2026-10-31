@@ -93,3 +93,8 @@ messages:
 
 # Affiche le détail de chaque fusion et de chaque envoi dans la console.
 debug: false
+
+paquets:
+  # Couche paquets (rôle de ProtocolLib) pour les plugins qui utilisent l'API de Vorace et pour /vorace paquets.
+  # Elle ne coûte rien tant que personne n'écoute. false = Vorace ne touche pas aux connexions.
+  actif: true

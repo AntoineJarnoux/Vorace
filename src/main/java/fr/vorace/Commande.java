@@ -93,6 +93,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "bloc", "blocs" -> bloc(s, a);
             case "glyphe", "glyphes" -> glyphe(s, a);
             case "modele", "modeles", "modèle" -> modele(s, a);
+            case "paquets", "paquet" -> paquets(s, a);
             case "emojis", "emoji" -> emojis(s);
             case "info" -> info(s);
             case "sources" -> sources(s);
@@ -108,7 +109,8 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace meuble [liste|poser|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
                 s.sendMessage(Messages.brut("<white>/vorace bloc [liste|poser|casser|info]</white> <gray>blocs personnalisés"));
                 s.sendMessage(Messages.brut("<white>/vorace glyphe [liste|menu <fond>]</white> <gray>glyphes et fonds de menus"));
-                s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|info|sur|invoquer|retirer]</white> <gray>modèles animés"));
+                s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|info|prive|public|sur|invoquer|retirer]</white> <gray>modèles animés"));
+                s.sendMessage(Messages.brut("<white>/vorace paquets [stats|journal|ecoutes] [joueur]</white> <gray>paquets du jeu"));
                 s.sendMessage(Messages.brut("<white>/emojis</white> <gray>(joueurs) liste des emojis du chat"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
@@ -312,6 +314,19 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
                 s.sendMessage(Messages.brut("<gray>" + Messages.echapper(i.modele().id()) + " : <white>" + Messages.echapper(i.etat())));
             }
+            case "prive", "privé", "public" -> {
+                Modeles.Instance i = m.plusProche(ici, 16);
+                if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
+                if (act.equals("public")) {
+                    i.visiblePour(null);
+                    s.sendMessage(Messages.brut("<green>Tout le monde voit de nouveau ce modèle."));
+                } else {
+                    Player cible = a.length > 2 ? Bukkit.getPlayerExact(a[2]) : p;
+                    if (cible == null) { s.sendMessage(Messages.brut("<red>Joueur introuvable.")); return; }
+                    i.visiblePour(List.of(cible));
+                    s.sendMessage(Messages.brut("<green>Seul " + Messages.echapper(cible.getName()) + " voit ce modèle maintenant. <gray>/vorace modele public pour annuler"));
+                }
+            }
             case "stop" -> {
                 Modeles.Instance i = m.plusProche(ici, 16);
                 if (i == null) { s.sendMessage(Messages.brut("<yellow>Aucun modèle à moins de 16 blocs.")); return; }
@@ -357,7 +372,39 @@ public final class Commande implements CommandExecutor, TabCompleter {
                     + (def.animations().isEmpty() ? "aucune" : String.join(", ", def.animations().keySet())) + ")");
                 s.sendMessage(Messages.brut("<gray>" + l.size() + " modèle(s) animé(s), " + m.instances().size() + " en jeu :"));
                 for (String x : l) s.sendMessage(Messages.brut("<white> " + Messages.echapper(x)));
-                s.sendMessage(Messages.brut("<gray>/vorace modele poser <modèle> [animation] | anim <animation> [boucle] | stop | info | sur <modèle> | invoquer <modèle> [mob] | retirer"));
+                s.sendMessage(Messages.brut("<gray>/vorace modele poser <modèle> [animation] | anim <animation> [boucle] | stop | info | prive [joueur] | public | sur <modèle> | invoquer <modèle> [mob] | retirer"));
+            }
+        }
+    }
+
+    private void paquets(CommandSender s, String[] a) {
+        fr.vorace.paquets.Paquets pq = plugin.paquets();
+        if (pq == null) { s.sendMessage(Messages.brut("<red>La couche paquets est désactivée (config : paquets.actif) ou n'a pas pu démarrer.")); return; }
+        String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "";
+        switch (act) {
+            case "stats", "journal" -> {
+                Player cible = a.length > 2 ? Bukkit.getPlayerExact(a[2]) : s instanceof Player j ? j : null;
+                if (cible == null) { s.sendMessage(Messages.brut("<red>Joueur introuvable. <gray>/vorace paquets " + act + " <joueur>" + (act.equals("journal") ? " [filtre] [secondes]" : " [secondes]"))); return; }
+                if (act.equals("stats")) {
+                    pq.statistiques(s, cible, Math.max(1, Math.min(60, a.length > 3 ? parseOu(a[3], 5) : 5)));
+                } else {
+                    String filtre = a.length > 3 ? a[3] : "";
+                    pq.journal(s, cible, filtre, Math.max(1, Math.min(120, a.length > 4 ? parseOu(a[4], 10) : 10)));
+                }
+            }
+            case "ecoutes" -> {
+                s.sendMessage(Messages.brut("<gray>Couche paquets : <white>" + pq.connexions() + "</white> connexion(s) suivie(s), <white>"
+                    + pq.abonnements().size() + "</white> écoute(s) :"));
+                for (fr.vorace.paquets.Abonnement ab : pq.abonnements()) {
+                    s.sendMessage(Messages.brut("<white> " + Messages.echapper(ab.plugin().getName()) + "</white> <gray>" + ab.sens() + " "
+                        + Messages.echapper(ab.noms().isEmpty() ? "(tous)" : String.join(", ", ab.noms()))));
+                }
+            }
+            case "essai" -> new fr.vorace.paquets.EssaiPaquets(plugin, pq).lancer(s);
+            default -> {
+                s.sendMessage(Messages.brut("<white>/vorace paquets stats [joueur] [secondes]</white> <gray>les paquets les plus fréquents"));
+                s.sendMessage(Messages.brut("<white>/vorace paquets journal <joueur> [filtre] [secondes]</white> <gray>les paquets en direct, avec leurs champs"));
+                s.sendMessage(Messages.brut("<white>/vorace paquets ecoutes</white> <gray>quels plugins écoutent quels paquets"));
             }
         }
     }
@@ -400,7 +447,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         List<String> r = new ArrayList<>();
         if (c.getName().equalsIgnoreCase("emojis")) return r;
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "paquets", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
@@ -421,7 +468,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         } else if (a.length == 3 && a[0].equalsIgnoreCase("glyphe") && a[1].equalsIgnoreCase("menu") && s.hasPermission("vorace.admin")) {
             for (Glyphes.Glyphe g : plugin.glyphes().tous()) if (g.def().menu() && g.def().id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(g.def().id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("modele") && s.hasPermission("vorace.admin")) {
-            for (String o : List.of("liste", "poser", "anim", "stop", "info", "sur", "invoquer", "retirer")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+            for (String o : List.of("liste", "poser", "anim", "stop", "info", "prive", "public", "sur", "invoquer", "retirer")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 3 && a[0].equalsIgnoreCase("modele") && List.of("poser", "sur", "invoquer").contains(a[1].toLowerCase(Locale.ROOT))
             && s.hasPermission("vorace.admin") && plugin.modeles() != null) {
             for (ModeleBB def : plugin.modeles().tous()) if (def.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(def.id());
@@ -429,6 +476,11 @@ public final class Commande implements CommandExecutor, TabCompleter {
             && plugin.modeles() != null && s instanceof Player p) {
             Modeles.Instance i = plugin.modeles().plusProche(p.getLocation(), 16);
             if (i != null) for (String n : i.modele().animations().keySet()) if (n.startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(n);
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("paquets") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("stats", "journal", "ecoutes")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("paquets") && s.hasPermission("vorace.admin")) {
+            Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));
+            r.removeIf(x -> !x.toLowerCase(Locale.ROOT).startsWith(a[2].toLowerCase(Locale.ROOT)));
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

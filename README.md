@@ -166,11 +166,41 @@ intégrées et les animations, et fabrique le pack tout seul. Exemple créé au 
   agrandis à l'affichage pour dépasser la limite de taille des modèles d'objets.
 - Chaque os est une entité d'affichage (pas de mob caché ni d'armor stand) : animations fluides grâce à
   l'interpolation du jeu, réglable avec `modeles.intervalle-tics`.
-- `/vorace modele [liste|poser|anim <animation> [boucle]|stop|info|sur|invoquer|retirer]`.
+- `/vorace modele [liste|poser|anim <animation> [boucle]|stop|info|prive|public|sur|invoquer|retirer]`.
 - API : `VoraceAPI.poserModele`, `attacherModele`, `jouerAnimation`, `modeleAnime`, `retirerModele`.
 
 Pas encore pris en charge : expressions Molang dans les animations (seulement des nombres), maillages (meshes),
 teinte rouge des dégâts.
+
+- `/vorace modele prive [joueur]` : seul ce joueur voit le modèle (`VoraceAPI.modeleVisiblePour(base, joueurs...)`),
+  `/vorace modele public` pour annuler.
+
+### Couche paquets (0.7, rôle de ProtocolLib)
+
+Vorace se glisse dans la connexion de chaque joueur : un plugin peut lire, modifier, annuler ou envoyer n'importe
+quel paquet du jeu, sans installer ProtocolLib. Rien n'est fait tant que personne n'écoute.
+
+```java
+// tout le monde voit midi, quelle que soit l'heure du serveur
+VoraceAPI.ecouterPaquets(this, Sens.SORTANT, p -> p.ecrire("dayTime", 6000L), "ClientboundSetTimePacket");
+
+// bloquer un message du chat avant qu'il parte
+VoraceAPI.ecouterPaquets(this, Sens.SORTANT, p -> {
+    if (p.texte("content").contains("secret")) p.annuler();
+}, "ClientboundSystemChatPacket");
+```
+
+- Les noms sont ceux du jeu (noms officiels de Mojang, utilisés par Paper). Pour les trouver :
+  `/vorace paquets journal <joueur> [filtre]` affiche les paquets en direct avec tous leurs champs.
+- `Paquet` : `nom()`, `joueur()`, `lire(champ)`, `texte(champ)`, `ecrire(champ, valeur)` (les paquets « record » du
+  jeu sont recréés tout seuls), `remplacer(autre)`, `annuler()`, `champs()`.
+- Les paquets regroupés par le jeu (lots) passent un par un dans les écoutes.
+- `VoraceAPI.envoyerPaquet(joueur, paquet)` et `recevoirPaquet(joueur, paquet)` (comme si le joueur l'avait envoyé).
+- Une écoute qui plante est signalée une fois dans la console et ne bloque jamais le paquet ; les écoutes d'un plugin
+  s'arrêtent toutes seules quand il s'arrête.
+- Les écoutes sont appelées sur le fil réseau du joueur : pour l'API Bukkit, passer par `Bukkit.getScheduler().runTask`.
+- `/vorace paquets stats [joueur]` : les paquets les plus fréquents (par seconde). `/vorace paquets ecoutes` : qui écoute quoi.
+- `paquets.actif: false` dans la config si on ne veut pas que Vorace touche aux connexions.
 
 ## Installation
 
@@ -196,7 +226,8 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
 | `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
-| `/vorace modele [liste\|poser\|anim\|stop\|info\|sur\|invoquer\|retirer]` | modèles animés |
+| `/vorace modele [liste\|poser\|anim\|stop\|info\|prive\|public\|sur\|invoquer\|retirer]` | modèles animés |
+| `/vorace paquets [stats\|journal\|ecoutes] [joueur]` | paquets du jeu (débogage) |
 | `/emojis` | (tous les joueurs) liste des emojis du chat |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
@@ -231,9 +262,21 @@ Au démarrage, Vorace se télécharge lui-même le pack pour vérifier : la cons
 
 ## Pour les autres plugins
 
-- `fr.vorace.api.VoracePackPretEvent` : le pack vient d'être (re)construit.
-- `fr.vorace.api.VoracePackChargeEvent` : un joueur a fini de charger le pack.
-- `fr.vorace.api.VoraceMeublePoseEvent`, `VoraceMeubleCasseEvent` : un meuble va être posé ou cassé (annulables).
+Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaque version publiée) :
+
+```kotlin
+repositories { maven("https://jitpack.io") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.7.0") }
+```
+
+Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`
+(objets, meubles, blocs, glyphes, modèles animés, paquets) et ces événements :
+
+- `VoracePackPretEvent` : le pack vient d'être (re)construit. `VoracePackChargeEvent` : un joueur a fini de le charger.
+- `VoraceObjetUtiliseEvent` : un objet à commandes est utilisé (annulable, commandes modifiables).
+- `VoraceMeublePoseEvent`, `VoraceMeubleCasseEvent` : un meuble va être posé ou cassé (annulables).
+- `VoraceBlocPoseEvent`, `VoraceBlocCasseEvent` : un bloc Vorace va être posé ou cassé (annulables, butin modifiable).
+- `VoraceModeleAnimationEvent` : une animation va être jouée sur un modèle (annulable, animation modifiable).
 
 ## Compiler
 
@@ -256,7 +299,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 4. ✅ Blocs personnalisés (minerais, décorations, avec outils, vitesse de minage et drops)
 5. ✅ Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
 6. ✅ Modèles animés : import direct des .bbmodel, animations, sur des entités
-7. Paquets et bibliothèque commune (entités visibles par un seul joueur, API pour VoraceMMO)
+7. ✅ Couche paquets (rôle de ProtocolLib), modèles visibles par un seul joueur, API commune et dépendance Maven
 8. Conversion automatique des configurations Nexo, ItemsAdder et ModelEngine
 
 ## Licence

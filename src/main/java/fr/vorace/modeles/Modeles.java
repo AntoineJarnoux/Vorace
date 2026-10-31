@@ -268,6 +268,8 @@ public final class Modeles {
         private Location derniere;
         /** Mort : la base n'existe plus, le modèle reste ici le temps de l'animation. */
         private Location fixe;
+        /** Joueurs qui voient le modèle ; null = tout le monde. */
+        private java.util.Set<UUID> spectateurs;
 
         Instance(ModeleBB modele, Entity base, boolean mob, float yaw) {
             this.modele = modele;
@@ -281,6 +283,27 @@ public final class Modeles {
         public Entity base() { return base; }
         public boolean surMob() { return mob; }
         public String animation() { return forcee != null ? forcee : auto; }
+
+        /** Seuls ces joueurs voient le modèle (null ou vide : tout le monde). */
+        public void visiblePour(Collection<? extends org.bukkit.entity.Player> joueurs) {
+            spectateurs = joueurs == null || joueurs.isEmpty() ? null : new java.util.HashSet<>(joueurs.stream().map(org.bukkit.entity.Player::getUniqueId).toList());
+            appliquerVisibilite();
+        }
+
+        public boolean prive() { return spectateurs != null; }
+
+        public boolean voit(UUID joueur) { return spectateurs == null || spectateurs.contains(joueur); }
+
+        void appliquerVisibilite() {
+            for (ItemDisplay d : parties) {
+                if (d == null || !d.isValid()) continue;
+                d.setVisibleByDefault(spectateurs == null);
+                if (spectateurs != null) for (UUID u : spectateurs) {
+                    org.bukkit.entity.Player j = Bukkit.getPlayer(u);
+                    if (j != null) j.showEntity(plugin, d);
+                }
+            }
+        }
         public int partiesValides() {
             int n = 0;
             for (ItemDisplay d : parties) if (d != null && d.isValid()) n++;
@@ -329,6 +352,7 @@ public final class Modeles {
                 });
             }
             derniere = l;
+            if (spectateurs != null) appliquerVisibilite();
             mettreAJour(1);
         }
 
@@ -345,6 +369,14 @@ public final class Modeles {
         public boolean jouer(String nom, boolean boucle) {
             Animation a = trouver(nom);
             if (a == null) return false;
+            if (Bukkit.isPrimaryThread()) {
+                fr.vorace.api.VoraceModeleAnimationEvent ev = new fr.vorace.api.VoraceModeleAnimationEvent(base, modele.id(), a.nom(), boucle);
+                Bukkit.getPluginManager().callEvent(ev);
+                if (ev.isCancelled()) return false;
+                a = trouver(ev.getAnimation());
+                if (a == null) return false;
+                boucle = ev.isBoucle();
+            }
             forcee = a.nom();
             forceeBoucle = boucle;
             debutForcee = tic;
@@ -362,6 +394,14 @@ public final class Modeles {
         public boolean jouerAuto(String role) {
             for (String n : AUTO.getOrDefault(role, List.of())) {
                 if (modele.animations().containsKey(n)) {
+                    if (Bukkit.isPrimaryThread()) {
+                        fr.vorace.api.VoraceModeleAnimationEvent ev = new fr.vorace.api.VoraceModeleAnimationEvent(base, modele.id(), n, false);
+                        Bukkit.getPluginManager().callEvent(ev);
+                        if (ev.isCancelled()) return false;
+                        Animation choisie = trouver(ev.getAnimation());
+                        if (choisie == null) return false;
+                        n = choisie.nom();
+                    }
                     forcee = n;
                     forceeBoucle = false;
                     debutForcee = tic;
