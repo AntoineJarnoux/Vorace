@@ -1,0 +1,33 @@
+name: Release
+
+# Pousser un tag "v0.2.0" compile le plugin et publie la release avec le .jar.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "9.2.0"
+      - name: Compiler et tester
+        run: gradle build tests
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$NOTES" ]; then ARGS=(--notes-file "$NOTES"); else ARGS=(--generate-notes); fi
+          gh release create "$GITHUB_REF_NAME" build/libs/Vorace-*.jar --title "Vorace ${GITHUB_REF_NAME#v}" "${ARGS[@]}"
