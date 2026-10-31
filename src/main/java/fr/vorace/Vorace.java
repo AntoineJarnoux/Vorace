@@ -59,7 +59,11 @@ public final class Vorace extends JavaPlugin {
         packs = new GestionPack(this);
         packs.preparerFormat(reglages);
         objets = new Objets(this);
-        objets.charger();
+        try {
+            objets.charger(false); // les recettes attendent la fin du démarrage (voir plus bas)
+        } catch (Throwable t) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les objets (le pack fonctionne quand même)", t);
+        }
         VoraceAPI.initialiser(this);
         demarrerHebergement();
         envoi = new Envoi(this);
@@ -77,8 +81,16 @@ public final class Vorace extends JavaPlugin {
         surveillance = new Surveillance(this);
         reconstruire(null);
         if (reglages.surveillance()) surveillance.demarrer(reglages.intervalleSecondes());
-        // le port du jeu n'est ouvert qu'une fois le serveur démarré : on teste au premier tick
+        // une fois le serveur démarré : recettes (registres du jeu prêts), puis test de l'hébergement
+        Bukkit.getScheduler().runTask(this, () -> {
+            try {
+                objets.enregistrerRecettes();
+            } catch (Throwable t) {
+                getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'enregistrer les recettes", t);
+            }
+        });
         Bukkit.getScheduler().runTaskLater(this, this::testerHebergement, 40L);
+        getLogger().info("Vorace " + getPluginMeta().getVersion() + " activé");
     }
 
     @Override
@@ -93,7 +105,7 @@ public final class Vorace extends JavaPlugin {
         Reglages ancien = reglages;
         reglages = Reglages.lire(getConfig());
         Messages.charger(getConfig());
-        objets.charger();
+        objets.charger(true);
         if (!ancien.mode().equals(reglages.mode()) || ancien.portDedie() != reglages.portDedie()
             || !ancien.adressePublique().equals(reglages.adressePublique()) || ancien.portPublic() != reglages.portPublic()
             || !ancien.urlExterne().equals(reglages.urlExterne())) {

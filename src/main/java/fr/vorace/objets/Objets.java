@@ -66,7 +66,7 @@ public final class Objets {
     public DefinitionObjet definition(String id) { return definitions.get(id); }
 
     /** Charge tous les .yml de plugins/Vorace/objets (sous-dossiers compris). */
-    public void charger() {
+    public void charger(boolean avecRecettes) {
         installerExemple();
         chargerCmd();
         Map<String, DefinitionObjet> lues = new LinkedHashMap<>();
@@ -100,7 +100,7 @@ public final class Objets {
         sauverCmd();
         problemes.forEach(m -> plugin.getLogger().warning("Objets : " + m));
         plugin.getLogger().info(lues.size() + " objet(s) chargé(s) depuis " + fichiers.size() + " fichier(s)");
-        enregistrerRecettes();
+        if (avecRecettes) enregistrerRecettes();
     }
 
     /** Fichiers pour le pack (appelé hors du fil principal pendant la construction). */
@@ -145,7 +145,7 @@ public final class Objets {
         }
 
         for (Map.Entry<String, Integer> e : d.enchantements().entrySet()) {
-            Enchantment ench = Registry.ENCHANTMENT.get(cle(e.getKey()));
+            Enchantment ench = enchantement(e.getKey());
             if (ench != null) meta.addEnchant(ench, e.getValue(), true);
             else plugin.getLogger().warning("Objet " + d.id() + " : enchantement inconnu « " + e.getKey() + " »");
         }
@@ -228,6 +228,15 @@ public final class Objets {
             return true;
         } catch (ReflectiveOperationException e) {
             return false;
+        }
+    }
+
+    private Enchantment enchantement(String nom) {
+        try {
+            return Registry.ENCHANTMENT.get(cle(nom));
+        } catch (RuntimeException ex) {
+            plugin.getLogger().warning("Enchantements pas encore disponibles : " + ex.getMessage());
+            return null;
         }
     }
 
@@ -332,7 +341,7 @@ public final class Objets {
 
     // ---------------------------------------------------------------- recettes
 
-    private void enregistrerRecettes() {
+    public void enregistrerRecettes() {
         for (NamespacedKey k : recettes) Bukkit.removeRecipe(k);
         recettes.clear();
         for (DefinitionObjet d : definitions.values()) {

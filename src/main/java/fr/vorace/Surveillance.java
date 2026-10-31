@@ -52,7 +52,7 @@ public final class Surveillance {
         derniereSignature = s;
         plugin.getLogger().info("Un pack source ou un objet a changé : reconstruction automatique");
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (plugin.objets() != null) plugin.objets().charger();
+            if (plugin.objets() != null) plugin.objets().charger(true);
             plugin.reconstruire(null);
         });
     }
