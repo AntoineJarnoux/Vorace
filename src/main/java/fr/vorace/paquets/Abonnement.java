@@ -9,7 +9,7 @@ public final class Abonnement {
 
     final Plugin plugin;
     final Sens sens;
-    /** Noms courts des paquets (« ClientboundSetTimePacket »), vide = tous. */
+    /** Noms des paquets (« ClientboundSetTimePacket »), vide = tous. */
     final Set<String> noms;
     final EcouteurPaquet ecouteur;
     private final Paquets gestion;
@@ -31,7 +31,10 @@ public final class Abonnement {
         gestion.retirer(this);
     }
 
+    /** Une écoute de « ServerboundMovePlayerPacket » reçoit aussi ses variantes (« ServerboundMovePlayerPacket.Pos »...). */
     boolean concerne(String nom) {
-        return noms.isEmpty() || noms.contains(nom);
+        if (noms.isEmpty() || noms.contains(nom)) return true;
+        int point = nom.indexOf('.');
+        return point > 0 && noms.contains(nom.substring(0, point));
     }
 }

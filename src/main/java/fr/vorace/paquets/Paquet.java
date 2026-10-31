@@ -31,8 +31,8 @@ public final class Paquet {
     /** Pseudo annoncé à la connexion (connu avant {@link #joueur()}), ou null. */
     public String nomConnexion() { return joueur != null ? joueur.getName() : nomConnexion; }
     public Sens sens() { return sens; }
-    /** Nom court du paquet, par exemple « ClientboundSetEntityDataPacket ». */
-    public String nom() { return brut.getClass().getSimpleName(); }
+    /** Nom court du paquet, par exemple « ClientboundSetEntityDataPacket », ou « ServerboundMovePlayerPacket.Pos » pour une variante. */
+    public String nom() { return Reflexion.nom(brut.getClass()); }
     /** L'objet du jeu (classe net.minecraft...). */
     public Object brut() { return brut; }
 

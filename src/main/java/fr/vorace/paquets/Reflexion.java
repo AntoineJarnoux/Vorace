@@ -22,6 +22,13 @@ final class Reflexion {
 
     private Reflexion() {}
 
+    private static final Map<Class<?>, String> NOMS = new ConcurrentHashMap<>();
+
+    /** Nom d'un paquet : « ClientboundSetTimePacket », ou « ServerboundMovePlayerPacket.Pos » pour une variante. */
+    static String nom(Class<?> c) {
+        return NOMS.computeIfAbsent(c, k -> k.getEnclosingClass() == null ? k.getSimpleName() : nom(k.getEnclosingClass()) + "." + k.getSimpleName());
+    }
+
     /** Champs d'instance de la classe et de ses parents, par nom (le plus proche gagne). */
     static Map<String, Field> champsDe(Class<?> c) {
         return CHAMPS.computeIfAbsent(c, k -> {
@@ -41,7 +48,7 @@ final class Reflexion {
 
     static Field champ(Object o, String nom) {
         Field f = champsDe(o.getClass()).get(nom);
-        if (f == null) throw new IllegalArgumentException(o.getClass().getSimpleName() + " n'a pas de champ « " + nom + " » (champs : " + champsDe(o.getClass()).keySet() + ")");
+        if (f == null) throw new IllegalArgumentException(nom(o.getClass()) + " n'a pas de champ « " + nom + " » (champs : " + champsDe(o.getClass()).keySet() + ")");
         return f;
     }
 
@@ -82,13 +89,13 @@ final class Reflexion {
                     valeurs[i] = lire(o, comp[i].getName());
                 }
             }
-            if (!trouve) throw new IllegalArgumentException(c.getSimpleName() + " n'a pas de champ « " + nom + " »");
+            if (!trouve) throw new IllegalArgumentException(nom(c) + " n'a pas de champ « " + nom + " »");
             try {
                 Constructor<?> k = c.getDeclaredConstructor(types);
                 k.setAccessible(true);
                 return k.newInstance(valeurs);
             } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("Impossible de recréer " + c.getSimpleName() + " : " + e, e);
+                throw new IllegalStateException("Impossible de recréer " + nom(c) + " : " + e, e);
             }
         }
         try {

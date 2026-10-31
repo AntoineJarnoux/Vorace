@@ -204,7 +204,7 @@ public final class Paquets implements Listener {
         if (msg instanceof Direct d) return d.paquet;
         Class<?> c = msg.getClass();
         if (!c.getName().startsWith("net.minecraft.")) return msg;
-        String nom = c.getSimpleName();
+        String nom = Reflexion.nom(c);
         if (i.joueur == null && i.nomConnexion == null && nom.equals("ServerboundHelloPacket")) {
             try { i.nomConnexion = String.valueOf(Reflexion.lire(msg, "name")); } catch (RuntimeException ignore) { }
         }

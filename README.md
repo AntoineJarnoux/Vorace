@@ -194,6 +194,8 @@ VoraceAPI.ecouterPaquets(this, Sens.SORTANT, p -> {
   `/vorace paquets journal <joueur> [filtre]` affiche les paquets en direct avec tous leurs champs.
 - `Paquet` : `nom()`, `joueur()`, `lire(champ)`, `texte(champ)`, `ecrire(champ, valeur)` (les paquets « record » du
   jeu sont recréés tout seuls), `remplacer(autre)`, `annuler()`, `champs()`.
+- Les variantes ont leur nom complet (« ServerboundMovePlayerPacket.Pos ») ; écouter « ServerboundMovePlayerPacket »
+  les reçoit toutes.
 - Les paquets regroupés par le jeu (lots) passent un par un dans les écoutes.
 - `VoraceAPI.envoyerPaquet(joueur, paquet)` et `recevoirPaquet(joueur, paquet)` (comme si le joueur l'avait envoyé).
 - Une écoute qui plante est signalée une fois dans la console et ne bloque jamais le paquet ; les écoutes d'un plugin
@@ -266,7 +268,7 @@ Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaq
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.7.0") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.7.1") }
 ```
 
 Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`

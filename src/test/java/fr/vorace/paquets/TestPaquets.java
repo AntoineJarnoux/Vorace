@@ -65,6 +65,15 @@ public final class TestPaquets {
         ch.writeOutbound(new ClientboundSetTimePacket(1, 2, false));
         verifier(ch.readOutbound() instanceof ClientboundSetTimePacket r && r.dayTime() == 6000, "une écoute en erreur ne bloque ni le paquet ni les autres écoutes");
 
+        // variantes : nom complet, et l'écoute du paquet parent les reçoit
+        verifier(Reflexion.nom(net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos.class).equals("ServerboundMovePlayerPacket.Pos"), "nom complet d'une variante");
+        AtomicInteger mouvements = new AtomicInteger();
+        Abonnement mv = pq.ecouter(faux, Sens.ENTRANT, p -> { mouvements.incrementAndGet(); p.ecrire("x", 5.0); }, "ServerboundMovePlayerPacket");
+        ch.writeInbound(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(1.0));
+        Object mvt = ch.readInbound();
+        verifier(mouvements.get() == 1 && Double.valueOf(5.0).equals(Reflexion.lire(mvt, "x")), "l'écoute du paquet parent reçoit et modifie la variante (champ du parent)");
+        mv.annuler();
+
         heure.annuler();
         verifier(pq.abonnements().size() == 2, "abonnement annulé");
         ch.writeOutbound("pas un paquet");
