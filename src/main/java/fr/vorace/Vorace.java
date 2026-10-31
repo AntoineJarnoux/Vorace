@@ -51,6 +51,7 @@ public final class Vorace extends JavaPlugin {
     private Blocs blocs;
     private Glyphes glyphes;
     private Modeles modeles;
+    private fr.vorace.interfaces.Menus menus;
     private fr.vorace.paquets.Paquets paquets;
     private volatile String testHebergement;
 
@@ -64,6 +65,7 @@ public final class Vorace extends JavaPlugin {
     public Blocs blocs() { return blocs; }
     public Glyphes glyphes() { return glyphes; }
     public Modeles modeles() { return modeles; }
+    public fr.vorace.interfaces.Menus menus() { return menus; }
     /** Couche paquets, ou null si désactivée (config « paquets.actif »). */
     public fr.vorace.paquets.Paquets paquets() { return paquets; }
     public String testHebergement() { return testHebergement; }
@@ -100,6 +102,8 @@ public final class Vorace extends JavaPlugin {
         demarrerHebergement();
         envoi = new Envoi(this);
         Bukkit.getPluginManager().registerEvents(envoi, this);
+        menus = new fr.vorace.interfaces.Menus(this);
+        Bukkit.getPluginManager().registerEvents(new fr.vorace.interfaces.EcouteurMenus(), this);
         try {
             ecouteurObjets = new EcouteurObjets(this);
             Bukkit.getPluginManager().registerEvents(ecouteurObjets, this);

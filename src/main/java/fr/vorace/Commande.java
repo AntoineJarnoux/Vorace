@@ -44,6 +44,12 @@ public final class Commande implements CommandExecutor, TabCompleter {
             emojis(s);
             return true;
         }
+        // /vorace tout seul : les menus (tout se fait en cliquant), le texte d'aide reste avec /vorace aide
+        if ((a.length == 0 || a[0].equalsIgnoreCase("menu")) && s instanceof Player joueur) {
+            if (s.hasPermission("vorace.admin")) plugin.menus().accueil().ouvrir(joueur);
+            else plugin.menus().joueur().ouvrir(joueur);
+            return true;
+        }
         String sous = a.length == 0 ? "aide" : a[0].toLowerCase(Locale.ROOT);
         if (!sous.equals("pack") && !sous.equals("emojis") && !s.hasPermission("vorace.admin")) {
             s.sendMessage(Messages.brut("<red>Tu n'as pas la permission."));
@@ -83,7 +89,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return true; }
                 int page = 0;
                 try { if (a.length > 1) page = Integer.parseInt(a[1]) - 1; } catch (NumberFormatException ignore) { }
-                new MenuObjets(plugin, page).ouvrir(p);
+                plugin.menus().objets(page).ouvrir(p);
             }
             case "maj" -> {
                 int n = 0;
@@ -100,7 +106,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "info" -> info(s);
             case "sources" -> sources(s);
             default -> {
-                s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion() + "</white> <gray>- commandes :"));
+                s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion() + "</white> <gray>- tape <white>/vorace</white> seul pour tout faire avec des menus. Commandes :"));
                 s.sendMessage(Messages.brut("<white>/vorace reload</white> <gray>recharge la config et reconstruit le pack"));
                 s.sendMessage(Messages.brut("<white>/vorace envoyer [joueur|tous]</white> <gray>envoie le pack"));
                 s.sendMessage(Messages.brut("<white>/vorace info</white> <gray>état du pack et de l'hébergement"));
@@ -518,7 +524,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         List<String> r = new ArrayList<>();
         if (c.getName().equalsIgnoreCase("emojis")) return r;
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "paquets", "convertir", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("menu", "aide", "reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "paquets", "convertir", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("convertir") && s.hasPermission("vorace.admin")) {

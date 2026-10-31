@@ -10,6 +10,10 @@ et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 
 ## Ce que fait Vorace
 
+**Tape `/vorace` : tout se fait avec des menus.** Objets, meubles, blocs, glyphes, modèles animés, pack, conversion
+et outils avancés : chaque bouton explique ce que fait chaque clic. Les commandes ci-dessous restent disponibles
+(`/vorace aide`).
+
 ### Packs de ressources (0.1)
 
 - **Fusionne tous les packs** du serveur en un seul : tes packs (dossiers ou .zip), celui de
@@ -245,6 +249,8 @@ puis retire-le ou désactive son envoi, sinon les joueurs recevront deux packs.
 
 | Commande | Rôle |
 |---|---|
+| `/vorace` | ouvre les menus (admins : tout ; joueurs : pack et emojis) |
+| `/vorace aide` | les commandes en texte |
 | `/vorace reload` | recharge `config.yml` et reconstruit le pack |
 | `/vorace envoyer [joueur\|tous]` | envoie le pack |
 | `/vorace info` | état du pack, de l'hébergement, et ton adresse de téléchargement |
@@ -296,7 +302,7 @@ Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaq
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.2") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.9.0") }
 ```
 
 Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`

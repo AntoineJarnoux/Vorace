@@ -86,6 +86,10 @@ cmd "vorace meuble liste"
 cmd "vorace bloc liste"
 cmd "vorace glyphe liste"
 sleep 2
+# menus (1.0) : un faux joueur admin ouvre /vorace et clique
+cmd "op Menus"
+node "$OUTILS/essai-menus.mjs" $CLIENT > menus.txt 2>&1
+sleep 1
 cmd "stop"
 for _ in $(seq 1 60); do kill -0 $SERVEUR 2>/dev/null || break; sleep 1; done
 kill $SERVEUR 2>/dev/null
@@ -105,6 +109,8 @@ ALERTES_CONVERSION=$(tail -n +"$AVANT_CONVERSION" journal.txt | grep -acE 'WARN\
 echo "alertes de Vorace après la conversion : $ALERTES_CONVERSION"
 for s in Nexo ItemsAdder ModelEngine; do grep -aqE "$s : [0-9]+ objet" journal.txt || { echo "ECHEC : conversion de $s"; exit 1; }; done
 if [ "$ALERTES_CONVERSION" -gt 0 ]; then echo "ECHEC : les fichiers convertis donnent des alertes au chargement"; exit 1; fi
+echo "===== Menus"; cat menus.txt
+grep -aq 'MENUS OK' menus.txt || { echo "ECHEC : menus"; exit 1; }
 ERREURS=$(grep -acE 'ERROR\]: \[Vorace\]|at fr\.vorace\.' journal.txt)
 echo "erreurs de Vorace dans la console : $ERREURS"
 if [ "$ERREURS" -gt 0 ]; then echo "ECHEC : erreurs de Vorace dans la console"; exit 1; fi

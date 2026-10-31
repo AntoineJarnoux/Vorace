@@ -77,7 +77,7 @@ tasks.register<JavaExec>("tests") {
 
 // Dépendance pour les autres plugins (via JitPack) :
 //   repositories { maven("https://jitpack.io") }
-//   dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.2") }
+//   dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.9.0") }
 publishing {
     publications {
         create<MavenPublication>("vorace") {
