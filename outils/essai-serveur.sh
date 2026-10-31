@@ -4,7 +4,7 @@
 # Usage : outils/essai-serveur.sh <version de Paper> <dossier contenant Vorace-*.jar>
 set -uo pipefail
 VERSION=${1:-1.21.4}
-JAR=$(ls "$2"/Vorace-*.jar | head -1)
+JAR=$(cd "$2" && ls "$PWD"/Vorace-*.jar | head -1)
 OUTILS=$(cd "$(dirname "$0")" && pwd)
 mkdir -p essai-serveur/plugins && cd essai-serveur
 cp "$JAR" plugins/
@@ -15,6 +15,7 @@ echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
 online-mode=false
 level-type=minecraft\:flat
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}
 generate-structures=false
 spawn-protection=0
 spawn-monsters=false
