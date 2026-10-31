@@ -439,6 +439,14 @@ public final class Objets {
                 faits.add("meubles");
                 change = true;
             }
+            // modèles d'exemple de la 0.3.0 (textures abîmées sur la chaise et la table) : remplacés s'ils n'ont pas été modifiés
+            for (String m : List.of("chaise", "lampe", "caisse", "table")) {
+                Path f = dossierRessources().resolve("modeles/exemple/" + m + ".json");
+                if (Files.isRegularFile(f) && Files.readString(f).contains("\"credit\": \"Vorace (exemple)\"")) {
+                    Files.delete(f);
+                    copier("exemples/meubles/" + m + ".json", f);
+                }
+            }
             if (change) {
                 Files.createDirectories(liste.getParent());
                 Files.write(liste, faits);

@@ -1,5 +1,5 @@
 {
-  "credit": "Vorace (exemple)",
+  "credit": "Vorace (exemple 2)",
   "textures": {
     "0": "exemple/bois",
     "particle": "exemple/bois"
@@ -18,22 +18,58 @@
       ],
       "faces": {
         "north": {
-          "texture": "#0"
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ]
         },
         "south": {
-          "texture": "#0"
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ]
         },
         "east": {
-          "texture": "#0"
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ]
         },
         "west": {
-          "texture": "#0"
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ]
         },
         "up": {
-          "texture": "#0"
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ]
         },
         "down": {
-          "texture": "#0"
+          "texture": "#0",
+          "uv": [
+            0,
+            0,
+            14,
+            14
+          ]
         }
       }
     }

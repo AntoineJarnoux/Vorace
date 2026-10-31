@@ -1,4 +1,4 @@
-## Vorace 0.3.1 : meubles
+## Vorace 0.3.2 : meubles
 
 Un meuble est un objet Vorace avec une section `meuble:`. Quatre exemples sont créés au démarrage (chaise, lampe, caisse de rangement, grande table), avec leurs recettes.
 
