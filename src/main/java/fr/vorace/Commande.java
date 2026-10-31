@@ -179,8 +179,12 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<gray>Rechargement de Vorace..."));
                 plugin.rechargerConfig();
                 for (Player p : Bukkit.getOnlinePlayers()) plugin.ecouteurObjets().mettreAJour(p);
-                plugin.reconstruire(res -> s.sendMessage(Messages.brut("<green>Pack prêt.</green> <gray>Les objets sont dans <white>/vorace objets</white>. "
-                    + "Pour l'envoyer à tout le monde : <white>/vorace envoyer tous")));
+                plugin.reconstruire(res -> {
+                    // les nouveaux objets n'ont pas d'image tant que les joueurs n'ont pas le nouveau pack : on l'envoie tout de suite
+                    Bukkit.getOnlinePlayers().forEach(plugin.envoi()::envoyer);
+                    s.sendMessage(Messages.brut("<green>Pack prêt et envoyé aux " + Bukkit.getOnlinePlayers().size()
+                        + " joueur(s) connecté(s).</green> <gray>Les objets sont dans <white>/vorace objets</white>."));
+                });
             });
         });
     }

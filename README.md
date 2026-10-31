@@ -225,7 +225,7 @@ ne modifie rien chez eux : tu peux les garder le temps de vérifier, puis les re
 Le résultat va dans `objets/converti/<plugin>.yml` et `glyphes/converti/<plugin>.yml`, les images et modèles dans
 `ressources/.../converti/<plugin>/` : tout est relu et ne dépend plus du pack de l'autre plugin. Un objet qui
 existe déjà dans Vorace n'est jamais écrasé (le converti prend un préfixe, par exemple `nexo_rubis`).
-Une nouvelle conversion remplace la précédente : pour garder tes retouches, renomme le fichier.
+Le nouveau pack est envoyé tout de suite aux joueurs connectés. Une nouvelle conversion remplace la précédente : pour garder tes retouches, renomme le fichier.
 Ce qui n'a pas pu être repris est listé dans `conversion/rapport-<plugin>.txt` (et les 5 premiers points en jeu).
 
 Les objets **Nexo et Oraxen déjà dans les inventaires** sont remplacés par leur version Vorace à la connexion
@@ -296,7 +296,7 @@ Vorace comme dépendance (avec [JitPack](https://jitpack.io), qui construit chaq
 
 ```kotlin
 repositories { maven("https://jitpack.io") }
-dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.0") }
+dependencies { compileOnly("com.github.ORA-KUN:Vorace:Vorace-0.8.1") }
 ```
 
 Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par `fr.vorace.api.VoraceAPI`

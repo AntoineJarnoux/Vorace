@@ -1,4 +1,4 @@
-## Vorace 0.8.0 : conversion depuis Nexo, Oraxen, ItemsAdder et ModelEngine
+## Vorace 0.8.1 : conversion depuis Nexo, Oraxen, ItemsAdder et ModelEngine
 
 **Une commande pour passer à Vorace.** `/vorace convertir` montre les plugins trouvés dans `plugins/` (un clic pour convertir), `/vorace convertir tout` les fait tous. Vorace lit seulement leurs fichiers de configuration et leurs images, jamais leur code, et ne touche à rien chez eux : tu peux les garder le temps de vérifier.
 
@@ -8,6 +8,7 @@
 - Les textures et modèles sont recopiés et réécrits pour Vorace : plus besoin du pack de l'autre plugin.
 - Un objet qui existe déjà dans Vorace n'est jamais écrasé (le converti prend un préfixe, par exemple `nexo_rubis`).
 - Ce qui n'a pas pu être repris est listé dans `plugins/Vorace/conversion/rapport-<plugin>.txt`.
+- Le nouveau pack est envoyé tout de suite aux joueurs connectés après une conversion (sinon les nouveaux objets n'ont pas d'image).
 - Les objets Nexo et Oraxen **déjà dans les inventaires** sont remplacés par leur version Vorace à la connexion (ou avec `/vorace maj`).
 
 Chaque version est essayée automatiquement sur un vrai serveur Paper 1.21.4 : modèles animés, couche paquets, et maintenant la conversion d'exemples Nexo, ItemsAdder et ModelEngine, qui doivent se charger sans aucune alerte.
