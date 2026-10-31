@@ -9,6 +9,7 @@ val paperApi = providers.gradleProperty("paperApi").get()
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.extendedclip.com/releases/") // PlaceholderAPI (facultatif au lancement)
 }
 
 // Copies de compilation des quelques classes internes de Paper utilisées (hébergement sur le port du jeu).
@@ -17,6 +18,7 @@ val stubs: SourceSet by sourceSets.creating
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperApi")
+    compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("io.netty:netty-transport:4.1.97.Final")
     compileOnly("io.netty:netty-buffer:4.1.97.Final")
     compileOnly(stubs.output)

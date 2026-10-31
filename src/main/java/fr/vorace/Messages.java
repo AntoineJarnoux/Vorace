@@ -3,6 +3,7 @@ package fr.vorace;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.HashMap;
@@ -22,7 +23,19 @@ public final class Messages {
     private static final Map<String, String> textes = new HashMap<>(DEFAUTS);
     private static final MiniMessage MM = MiniMessage.miniMessage();
 
+    /** Balises en plus des balises MiniMessage (glyphes, décalages). */
+    private static volatile TagResolver extra = TagResolver.empty();
+
     private Messages() {}
+
+    public static void resolveur(TagResolver r) {
+        extra = r == null ? TagResolver.empty() : r;
+    }
+
+    /** MiniMessage avec les balises de Vorace (<glyphe:x>, <decalage:n>). */
+    public static Component mini(String miniMessage) {
+        return MM.deserialize(miniMessage, extra);
+    }
 
     public static void charger(FileConfiguration c) {
         textes.clear();
@@ -34,21 +47,21 @@ public final class Messages {
     }
 
     public static Component composant(String cle) {
-        return MM.deserialize(textes.getOrDefault(cle, cle));
+        return mini(textes.getOrDefault(cle, cle));
     }
 
     public static Component prefixe(String cle) {
-        return MM.deserialize(textes.get("prefixe") + textes.getOrDefault(cle, cle));
+        return mini(textes.get("prefixe") + textes.getOrDefault(cle, cle));
     }
 
     /** Texte libre (MiniMessage) précédé du préfixe. */
     public static Component brut(String miniMessage) {
-        return MM.deserialize(textes.get("prefixe") + miniMessage);
+        return mini(textes.get("prefixe") + miniMessage);
     }
 
     /** Texte d'objet ou de menu : MiniMessage, sans l'italique que le jeu ajoute aux noms. */
     public static Component objet(String miniMessage) {
-        return MM.deserialize(miniMessage).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
+        return mini(miniMessage).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
     }
 
     public static String echapper(String s) {

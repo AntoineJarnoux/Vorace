@@ -1,6 +1,7 @@
 package fr.vorace;
 
 import fr.vorace.envoi.Envoi;
+import fr.vorace.glyphes.Glyphes;
 import fr.vorace.objets.DefinitionObjet;
 import fr.vorace.objets.MenuObjets;
 import fr.vorace.pack.Constructeur;
@@ -16,6 +17,10 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +37,12 @@ public final class Commande implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String label, String[] a) {
+        if (c.getName().equalsIgnoreCase("emojis")) {
+            emojis(s);
+            return true;
+        }
         String sous = a.length == 0 ? "aide" : a[0].toLowerCase(Locale.ROOT);
-        if (!sous.equals("pack") && !s.hasPermission("vorace.admin")) {
+        if (!sous.equals("pack") && !sous.equals("emojis") && !s.hasPermission("vorace.admin")) {
             s.sendMessage(Messages.brut("<red>Tu n'as pas la permission."));
             return true;
         }
@@ -80,6 +89,8 @@ public final class Commande implements CommandExecutor, TabCompleter {
             }
             case "meuble", "meubles" -> meuble(s, a);
             case "bloc", "blocs" -> bloc(s, a);
+            case "glyphe", "glyphes" -> glyphe(s, a);
+            case "emojis", "emoji" -> emojis(s);
             case "info" -> info(s);
             case "sources" -> sources(s);
             default -> {
@@ -93,6 +104,8 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace maj</white> <gray>met à jour les objets dans les inventaires"));
                 s.sendMessage(Messages.brut("<white>/vorace meuble [liste|poser|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
                 s.sendMessage(Messages.brut("<white>/vorace bloc [liste|poser|casser|info]</white> <gray>blocs personnalisés"));
+                s.sendMessage(Messages.brut("<white>/vorace glyphe [liste|menu <fond>]</white> <gray>glyphes et fonds de menus"));
+                s.sendMessage(Messages.brut("<white>/emojis</white> <gray>(joueurs) liste des emojis du chat"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
         }
@@ -202,6 +215,55 @@ public final class Commande implements CommandExecutor, TabCompleter {
         }
     }
 
+    private void emojis(CommandSender s) {
+        Player p = s instanceof Player j ? j : null;
+        List<Glyphes.Glyphe> liste = new ArrayList<>();
+        for (Glyphes.Glyphe g : plugin.glyphes().tous()) if (g.def().liste() && Glyphes.autorise(p, g)) liste.add(g);
+        if (liste.isEmpty()) { s.sendMessage(Messages.brut("<gray>Aucun emoji sur ce serveur.")); return; }
+        s.sendMessage(Messages.brut("<gray>Emojis : écris le raccourci dans le chat (touche Tab pour les suggestions). Clique pour l'écrire :"));
+        Component ligne = Component.empty();
+        int n = 0;
+        for (Glyphes.Glyphe g : liste) {
+            String r = g.def().raccourcis().isEmpty() ? "" : g.def().raccourcis().get(0);
+            Component e = Glyphes.composant(g)
+                .hoverEvent(HoverEvent.showText(Component.text(String.join("  ", g.def().raccourcis()), NamedTextColor.YELLOW)))
+                .clickEvent(ClickEvent.suggestCommand(r));
+            ligne = ligne.append(e).append(Component.text("  "));
+            if (++n % 12 == 0) { s.sendMessage(ligne); ligne = Component.empty(); }
+        }
+        if (n % 12 != 0) s.sendMessage(ligne);
+    }
+
+    private void glyphe(CommandSender s, String[] a) {
+        String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
+        if (act.equals("menu")) {
+            if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+            if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace glyphe menu <fond>")); return; }
+            Glyphes.Glyphe g = plugin.glyphes().glyphe(a[2]);
+            if (g == null) { s.sendMessage(Messages.brut("<red>Glyphe inconnu : " + Messages.echapper(a[2]))); return; }
+            int lignes = a.length > 3 ? Math.max(1, Math.min(6, parseOu(a[3], g.def().lignes()))) : g.def().lignes();
+            p.openInventory(Bukkit.createInventory(null, lignes * 9,
+                plugin.glyphes().titreMenu(g.def().id(), Component.text("Aperçu : " + g.def().id()))));
+            return;
+        }
+        List<Glyphes.Glyphe> tous = new ArrayList<>(plugin.glyphes().tous());
+        s.sendMessage(Messages.brut("<gray>" + tous.size() + " glyphe(s) :"));
+        for (Glyphes.Glyphe g : tous) {
+            Component l = Component.text(" ").append(Glyphes.composant(g)).append(Component.text(" " + g.def().id(), NamedTextColor.WHITE))
+                .append(Component.text(g.def().menu() ? "  fond de menu (" + g.hauteur() + " px de haut) : /vorace glyphe menu " + g.def().id()
+                    : "  " + String.join(" ", g.def().raccourcis()) + (g.def().permission() != null ? "  [" + g.def().permission() + "]" : ""), NamedTextColor.GRAY))
+                .append(Component.text("  U+" + Integer.toHexString(g.code()).toUpperCase(Locale.ROOT), NamedTextColor.DARK_GRAY))
+                .clickEvent(ClickEvent.copyToClipboard(g.texte()))
+                .hoverEvent(HoverEvent.showText(Component.text("Clic : copier le caractère (à coller dans n'importe quel texte)")));
+            s.sendMessage(l);
+        }
+        s.sendMessage(Messages.brut("<gray>Dans un nom d'objet ou un message : <white><glyphe:id></white>, décalage : <white><decalage:-8></white>"));
+    }
+
+    private static int parseOu(String t, int defaut) {
+        try { return Integer.parseInt(t.trim()); } catch (NumberFormatException e) { return defaut; }
+    }
+
     private void info(CommandSender s) {
         Constructeur.Resultat r = plugin.packs().actuel();
         s.sendMessage(Messages.brut("<white>Vorace " + plugin.getPluginMeta().getVersion() + " <gray>- " + plugin.objets().toutes().size() + " objet(s)"));
@@ -234,8 +296,9 @@ public final class Commande implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         List<String> r = new ArrayList<>();
+        if (c.getName().equalsIgnoreCase("emojis")) return r;
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "envoyer", "maj", "info", "sources", "pack") : List.of("pack")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "bloc", "glyphe", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
@@ -251,6 +314,10 @@ public final class Commande implements CommandExecutor, TabCompleter {
             for (String o : List.of("liste", "poser", "casser", "info")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 3 && a[0].equalsIgnoreCase("bloc") && a[1].equalsIgnoreCase("poser") && s.hasPermission("vorace.admin")) {
             for (DefinitionObjet d : plugin.objets().toutes()) if (d.bloc() != null && d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("glyphe") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("liste", "menu")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("glyphe") && a[1].equalsIgnoreCase("menu") && s.hasPermission("vorace.admin")) {
+            for (Glyphes.Glyphe g : plugin.glyphes().tous()) if (g.def().menu() && g.def().id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(g.def().id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

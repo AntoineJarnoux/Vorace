@@ -9,6 +9,8 @@ import fr.vorace.hebergement.HebergeurMemePort;
 import fr.vorace.hebergement.HebergeurPortDedie;
 import fr.vorace.blocs.Blocs;
 import fr.vorace.blocs.EcouteurBlocs;
+import fr.vorace.glyphes.EcouteurGlyphes;
+import fr.vorace.glyphes.Glyphes;
 import fr.vorace.meubles.EcouteurMeubles;
 import fr.vorace.meubles.Meubles;
 import fr.vorace.objets.EcouteurObjets;
@@ -45,6 +47,7 @@ public final class Vorace extends JavaPlugin {
     private EcouteurObjets ecouteurObjets;
     private Meubles meubles;
     private Blocs blocs;
+    private Glyphes glyphes;
     private volatile String testHebergement;
 
     public Reglages reglages() { return reglages; }
@@ -55,6 +58,7 @@ public final class Vorace extends JavaPlugin {
     public EcouteurObjets ecouteurObjets() { return ecouteurObjets; }
     public Meubles meubles() { return meubles; }
     public Blocs blocs() { return blocs; }
+    public Glyphes glyphes() { return glyphes; }
     public String testHebergement() { return testHebergement; }
 
     @Override
@@ -71,6 +75,12 @@ public final class Vorace extends JavaPlugin {
             objets.charger(false); // les recettes attendent la fin du démarrage (voir plus bas)
         } catch (Throwable t) {
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les objets (le pack fonctionne quand même)", t);
+        }
+        glyphes = new Glyphes(this);
+        try {
+            glyphes.charger();
+        } catch (Throwable t) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les glyphes", t);
         }
         VoraceAPI.initialiser(this);
         demarrerHebergement();
@@ -98,11 +108,19 @@ public final class Vorace extends JavaPlugin {
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les blocs", t);
         }
 
-        PluginCommand cmd = getCommand("vorace");
-        if (cmd != null) {
-            Commande c = new Commande(this);
-            cmd.setExecutor(c);
-            cmd.setTabCompleter(c);
+        try {
+            Bukkit.getPluginManager().registerEvents(new EcouteurGlyphes(this), this);
+        } catch (Throwable t) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les emojis du chat", t);
+        }
+
+        Commande c = new Commande(this);
+        for (String nom : List.of("vorace", "emojis")) {
+            PluginCommand cmd = getCommand(nom);
+            if (cmd != null) {
+                cmd.setExecutor(c);
+                cmd.setTabCompleter(c);
+            }
         }
 
         surveillance = new Surveillance(this);
@@ -117,6 +135,15 @@ public final class Vorace extends JavaPlugin {
             }
         });
         Bukkit.getScheduler().runTaskLater(this, this::testerHebergement, 40L);
+        // PlaceholderAPI (facultatif) : %vorace_glyphe_<id>%, %vorace_decalage_<n>%
+        Bukkit.getScheduler().runTask(this, () -> {
+            if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return;
+            try {
+                if (new fr.vorace.glyphes.ExtensionPlaceholder(this).register()) getLogger().info("PlaceholderAPI : %vorace_glyphe_<id>% disponible");
+            } catch (Throwable t) {
+                getLogger().warning("PlaceholderAPI : extension non enregistrée (" + t + ")");
+            }
+        });
         getLogger().info("Vorace " + getPluginMeta().getVersion() + " activé");
     }
 
@@ -139,6 +166,7 @@ public final class Vorace extends JavaPlugin {
         reglages = Reglages.lire(getConfig());
         Messages.charger(getConfig());
         objets.charger(true);
+        glyphes.charger();
         rafraichirMeubles();
         if (!ancien.mode().equals(reglages.mode()) || ancien.portDedie() != reglages.portDedie()
             || !ancien.adressePublique().equals(reglages.adressePublique()) || ancien.portPublic() != reglages.portPublic()

@@ -5,6 +5,7 @@ import fr.vorace.objets.DefinitionObjet;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
@@ -71,5 +72,34 @@ public final class VoraceAPI {
         if (plugin == null || plugin.blocs() == null) return false;
         DefinitionObjet d = plugin.objets().definition(id);
         return d != null && d.bloc() != null && plugin.blocs().placer(b, id);
+    }
+
+    // ------------------------------------------------------------------ glyphes (0.5)
+
+    /** Caractère d'un glyphe (à mettre dans n'importe quel texte), ou null. Pensez au blanc (§f) devant si le texte est coloré. */
+    public static String glyphe(String id) {
+        if (plugin == null || plugin.glyphes() == null) return null;
+        fr.vorace.glyphes.Glyphes.Glyphe g = plugin.glyphes().glyphe(id);
+        return g == null ? null : g.texte();
+    }
+
+    /** Glyphe en composant Adventure (déjà en blanc), ou null. */
+    public static net.kyori.adventure.text.Component glypheComposant(String id) {
+        return plugin == null || plugin.glyphes() == null ? null : plugin.glyphes().composant(id);
+    }
+
+    /** Texte qui décale la suite de n pixels (négatif = vers la gauche). */
+    public static String decalage(int pixels) {
+        return fr.vorace.glyphes.GenerateurGlyphes.decalage(pixels);
+    }
+
+    /** Titre de menu avec un fond personnalisé (glyphe « fond-menu: true »). */
+    public static net.kyori.adventure.text.Component titreMenu(String fond, net.kyori.adventure.text.Component titre) {
+        return plugin == null || plugin.glyphes() == null ? titre : plugin.glyphes().titreMenu(fond, titre);
+    }
+
+    /** Remplace les raccourcis d'emojis (« :coeur: ») que ce joueur a le droit d'utiliser. */
+    public static net.kyori.adventure.text.Component emojis(Player joueur, net.kyori.adventure.text.Component texte) {
+        return plugin == null || plugin.glyphes() == null ? texte : plugin.glyphes().remplacer(joueur, texte);
     }
 }

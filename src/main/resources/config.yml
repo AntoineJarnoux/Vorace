@@ -68,6 +68,12 @@ blocs:
   # Sans ce réglage, Vorace corrige les blocs lui-même, mais un bloc peut clignoter.
   reglage-paper-auto: true
 
+glyphes:
+  # Remplace les raccourcis d'emojis (:coeur:, <3...) dans le chat et sur les panneaux.
+  # Les glyphes se créent dans plugins/Vorace/glyphes/ (voir exemple-glyphes.yml).
+  chat: true
+  panneaux: true
+
 surveillance:
   # Reconstruit le pack tout seul quand un pack source ou un objet change (par exemple après /meg reload).
   actif: true

@@ -104,7 +104,8 @@ public final class GestionPack {
         }
         if (plugin.objets() != null) {
             Journal journalObjets = new Journal();
-            java.util.Map<String, byte[]> objets = plugin.objets().fichiersPack(format, journalObjets);
+            java.util.Map<String, byte[]> objets = new java.util.TreeMap<>(plugin.objets().fichiersPack(format, journalObjets));
+            if (plugin.glyphes() != null) objets.putAll(plugin.glyphes().fichiersPack(journalObjets));
             if (!objets.isEmpty()) sources.add(Source.enMemoire("objets Vorace", objets));
             journalObjets.lignes().forEach(l -> plugin.getLogger().warning(l.message()));
         }

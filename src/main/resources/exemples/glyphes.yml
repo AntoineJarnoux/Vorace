@@ -1,0 +1,43 @@
+# ============================================================
+#  Glyphes Vorace - exemples (tu peux modifier ou supprimer ce fichier)
+#  Un glyphe est une image qui s'écrit comme une lettre : emojis du chat, icônes dans les noms
+#  d'objets, le Tab, le tableau de scores, les titres... et fonds de menus personnalisés.
+#
+#  Options :
+#    texture: chemin            image dans plugins/Vorace/ressources/textures/chemin.png
+#    hauteur: 9                 hauteur affichée en pixels (9 = une ligne de texte)
+#    montee: 8                  pixels au-dessus de la ligne d'écriture (8 = aligné sur le texte)
+#    raccourcis: [":)", "<3"]   textes remplacés dans le chat et sur les panneaux
+#                               (« :nom: » est toujours ajouté ; raccourcis: false pour aucun)
+#    permission: vip.emojis     permission pour utiliser les raccourcis (rien = tout le monde)
+#    liste: true                montré dans /emojis
+#    fond-menu: true            fond de menu : hauteur et position calculées toutes seules
+#    lignes: 3                  (fond de menu) taille du coffre pour l'aperçu /vorace glyphe menu
+#
+#  Utilisation :
+#    - chat et panneaux : écris :coeur: (touche Tab pour les suggestions), /emojis pour la liste ;
+#    - noms d'objets, lore, messages de Vorace : <glyphe:coeur>  et décalage : <decalage:-8> ;
+#    - autres plugins avec PlaceholderAPI : %vorace_glyphe_coeur%, %vorace_decalage_-8% ;
+#    - n'importe quel texte : /vorace glyphe liste, clic sur un glyphe pour copier son caractère.
+#  Une image d'emoji fait souvent 9x9 pixels. Un fond de menu de coffre fait 176 pixels de large.
+# ============================================================
+
+coeur:
+  texture: exemple/glyphes/coeur
+  raccourcis: ["<3"]
+
+etoile:
+  texture: exemple/glyphes/etoile
+
+sourire:
+  texture: exemple/glyphes/sourire
+  raccourcis: [":)", ":-)"]
+
+feu:
+  texture: exemple/glyphes/feu
+
+# fond de menu pour un coffre de 3 lignes (176 x 168 pixels)
+fond_coffre:
+  texture: exemple/glyphes/fond_coffre
+  fond-menu: true
+  lignes: 3

@@ -6,16 +6,24 @@ description: Plugin libre de packs de ressources, objets, meubles, blocs et glyp
 authors: [ORA-KUN]
 website: https://github.com/ORA-KUN/Vorace
 load: STARTUP
-softdepend: [ModelEngine, MythicMobs]
+softdepend: [ModelEngine, MythicMobs, PlaceholderAPI]
 commands:
   vorace:
     description: Gestion du pack de ressources Vorace
-    usage: /vorace [reload|envoyer|info|sources|give|objets|meuble|bloc|maj|pack]
+    usage: /vorace [reload|envoyer|info|sources|give|objets|meuble|bloc|glyphe|emojis|maj|pack]
     aliases: [vo]
+  emojis:
+    description: Liste des emojis du chat
+    usage: /emojis
+    aliases: [emoji]
+    permission: vorace.emojis
 permissions:
   vorace.admin:
     description: Toutes les commandes de Vorace
     default: op
   vorace.pack:
     description: Recevoir à nouveau le pack avec /vorace pack
+    default: true
+  vorace.emojis:
+    description: Voir la liste des emojis avec /emojis
     default: true

@@ -119,6 +119,35 @@ minerai_rubis:
 Limite connue (la même qu'avec les autres plugins de blocs) : les blocs Vorace utilisent les états du bloc à note.
 Avec le réglage Paper activé, les blocs à note normaux ne changent plus d'instrument selon le bloc posé dessous.
 
+### Glyphes, emojis et fonds de menus (0.5)
+
+Un glyphe est une image qui s'écrit comme une lettre. Ils se créent dans `plugins/Vorace/glyphes/`
+(exemples créés au premier démarrage : cœur, étoile, sourire, feu et un fond de coffre) :
+
+```yaml
+coeur:
+  texture: exemple/glyphes/coeur     # image dans ressources/textures/
+  raccourcis: ["<3"]                 # « :coeur: » est ajouté tout seul
+  # permission: vip.emojis
+
+fond_coffre:
+  texture: exemple/glyphes/fond_coffre   # 176 pixels de large
+  fond-menu: true                        # hauteur et position calculées toutes seules
+```
+
+- **Emojis dans le chat et sur les panneaux** : `:coeur:` devient l'image. Les raccourcis apparaissent dans les
+  suggestions du chat (touche Tab), `/emojis` les montre à tous les joueurs. Permission par emoji possible.
+- **Partout** : les glyphes utilisent la police normale du jeu, donc ils marchent dans les noms d'objets, le lore,
+  le Tab, le tableau de scores, les titres, les bossbars et les menus, même avec des plugins qui n'écrivent que du texte simple.
+- Balises MiniMessage dans les objets et messages Vorace : `<glyphe:coeur>`, `<decalage:-8>` (décalage en pixels).
+- **Fonds de menus** : `VoraceAPI.titreMenu("fond_coffre", titre)` place l'image en haut à gauche de la fenêtre
+  (la largeur réelle de l'image est calculée pour que le titre reste à sa place). Aperçu : `/vorace glyphe menu fond_coffre`.
+- PlaceholderAPI (facultatif) : `%vorace_glyphe_coeur%`, `%vorace_decalage_-8%`.
+- `/vorace glyphe liste` (clic sur un glyphe : copie son caractère), `/vorace glyphe menu <fond> [lignes]`.
+- API : `VoraceAPI.glyphe(id)`, `glypheComposant(id)`, `decalage(n)`, `titreMenu(fond, titre)`, `emojis(joueur, texte)`.
+
+Chaque glyphe garde son caractère d'un redémarrage à l'autre (`donnees/glyphes.txt`), de U+EA00 à U+F6FF.
+
 ## Installation
 
 1. Mets `Vorace-x.y.z.jar` dans `plugins/` et redémarre le serveur.
@@ -142,9 +171,11 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace maj` | met à jour les objets Vorace dans les inventaires des joueurs connectés |
 | `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
+| `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
+| `/emojis` | (tous les joueurs) liste des emojis du chat |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
-Permissions : `vorace.admin` (op par défaut), `vorace.pack` (tout le monde).
+Permissions : `vorace.admin` (op par défaut), `vorace.pack` et `vorace.emojis` (tout le monde).
 
 ## Ordre de fusion
 
@@ -198,7 +229,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 2. ✅ Objets personnalisés (texture ou modèle 3D, propriétés, actions au clic, recettes)
 3. ✅ Meubles (modèles 3D posables, hitbox, sièges, lumières, coffres)
 4. ✅ Blocs personnalisés (minerais, décorations, avec outils, vitesse de minage et drops)
-5. Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
+5. ✅ Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
 6. Modèles animés : import direct des .bbmodel, animations, sur des entités
 7. Paquets et bibliothèque commune (entités visibles par un seul joueur, API pour VoraceMMO)
 8. Conversion automatique des configurations Nexo, ItemsAdder et ModelEngine

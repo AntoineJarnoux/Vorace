@@ -50,9 +50,10 @@ public final class Surveillance {
         if (s == derniereSignature) { signatureVue = s; return; }
         if (s != signatureVue) { signatureVue = s; return; } // ça bouge encore, on attend un tour
         derniereSignature = s;
-        plugin.getLogger().info("Un pack source ou un objet a changé : reconstruction automatique");
+        plugin.getLogger().info("Un pack source, un objet ou un glyphe a changé : reconstruction automatique");
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (plugin.objets() != null) { plugin.objets().charger(true); plugin.rafraichirMeubles(); }
+            if (plugin.glyphes() != null) plugin.glyphes().charger();
             plugin.reconstruire(null);
         });
     }
@@ -62,6 +63,9 @@ public final class Surveillance {
         if (plugin.objets() != null) {
             sources.add(new Recherche.Trouve("objets", plugin.objets().dossierObjets(), Files.isDirectory(plugin.objets().dossierObjets())));
             sources.add(new Recherche.Trouve("ressources", plugin.objets().dossierRessources(), Files.isDirectory(plugin.objets().dossierRessources())));
+        }
+        if (plugin.glyphes() != null) {
+            sources.add(new Recherche.Trouve("glyphes", plugin.glyphes().dossier(), Files.isDirectory(plugin.glyphes().dossier())));
         }
         long h = 17;
         for (Recherche.Trouve t : sources) {
