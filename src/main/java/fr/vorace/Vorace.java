@@ -68,8 +68,12 @@ public final class Vorace extends JavaPlugin {
         demarrerHebergement();
         envoi = new Envoi(this);
         Bukkit.getPluginManager().registerEvents(envoi, this);
-        ecouteurObjets = new EcouteurObjets(this);
-        Bukkit.getPluginManager().registerEvents(ecouteurObjets, this);
+        try {
+            ecouteurObjets = new EcouteurObjets(this);
+            Bukkit.getPluginManager().registerEvents(ecouteurObjets, this);
+        } catch (Throwable t) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les actions des objets", t);
+        }
 
         PluginCommand cmd = getCommand("vorace");
         if (cmd != null) {
