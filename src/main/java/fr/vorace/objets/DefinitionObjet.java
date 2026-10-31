@@ -1,5 +1,6 @@
 package fr.vorace.objets;
 
+import fr.vorace.meubles.DefinitionMeuble;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ public record DefinitionObjet(
     Map<String, Integer> enchantements, Boolean brillance, boolean incassable, List<String> cacher,
     Integer couleur, List<Attribut> attributs, Integer taillePile, Integer durabilite, Integer cmdFixe,
     List<String> commandesDroit, List<String> commandesGauche, boolean consommer, int delaiTicks, String messageDelai,
-    Recette recette
+    Recette recette, DefinitionMeuble meuble
 ) {
 
     public static final Pattern ID_VALIDE = Pattern.compile("[a-z0-9_.\\-/]+");
@@ -86,7 +87,7 @@ public record DefinitionObjet(
             s.contains("custom-model-data") ? s.getInt("custom-model-data", 0) : null,
             droit, gauche, sc != null && sc.getBoolean("consommer", false), sc == null ? 0 : sc.getInt("delai-ticks", 0),
             sc == null ? null : sc.getString("message-delai"),
-            recette);
+            recette, s.isConfigurationSection("meuble") ? DefinitionMeuble.lire(id, s.getConfigurationSection("meuble"), problemes) : null);
     }
 
     private static String nettoyer(String chemin) {

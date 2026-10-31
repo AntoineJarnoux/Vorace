@@ -1,0 +1,83 @@
+# ============================================================
+#  Meubles Vorace - exemples (tu peux modifier ou supprimer ce fichier)
+#  Un meuble est un objet Vorace avec une section « meuble: ».
+#  Clic droit sur un bloc avec l'objet : le meuble est posé, tourné vers toi.
+#  Clic gauche dessus : il est cassé et rendu. Clic droit dessus : s'asseoir, ouvrir son coffre...
+#  Modèles : export Blockbench « Java Block/Item » (.json) dans ressources/modeles/.
+#  L'avant du meuble est la face « north » du modèle dans Blockbench.
+#
+#  Toutes les options de « meuble: » (aucune n'est obligatoire) :
+#    hitbox: ["0,0,0"]        blocs solides occupés (barrières), en blocs, dans le repère du modèle Blockbench
+#                             (x et z comme dans Blockbench, y vers le haut). Par défaut : un bloc.
+#    hitbox: { largeur: 1, hauteur: 0.2 }   hitbox non solide (on marche à travers), ex. tapis, plantes
+#    hitbox: aucune           pas de hitbox du tout (non cassable à la main : /vorace meuble retirer)
+#    sieges: ["0, 0.6, 0"]    places assises (x, hauteur de l'assise, z)
+#    rotation: 8              4, 8, 16 ou libre
+#    pose: [sol]              sol, mur, plafond (plusieurs possibles)
+#    lumiere: 15              lumière émise (0 à 15)
+#    luminosite: 15           le modèle s'affiche toujours éclairé (utile pour une lampe)
+#    taille: 1.0              échelle du modèle
+#    decalage: "0, 0, 0"      déplace le modèle (en blocs)
+#    rotation-modele: 0       si ton modèle ne regarde pas vers north dans Blockbench (90, 180, 270)
+#    stockage: 3              coffre de 1 à 6 lignes (le contenu reste dans le meuble)
+#    titre-stockage: "..."    titre du coffre
+#    son-pose / son-casse     sons du jeu (ex. block.wood.place)
+#    butin: true              rendre l'objet quand on le casse
+#    commandes: [...]         commandes au clic droit (comme pour les objets : "console: ..." ou "joueur: ...")
+# ============================================================
+
+chaise:
+  materiau: PAPER
+  nom: "<#c8935a>Chaise en bois"
+  description: ["<gray>Clic droit pour s'asseoir."]
+  modele: exemple/chaise
+  meuble:
+    sieges: ["0, 0.6, 0"]
+    rotation: 8
+  recette:
+    type: forme
+    forme: ["P  ", "PPP", "B B"]
+    ingredients: { P: OAK_PLANKS, B: STICK }
+
+lampe:
+  materiau: PAPER
+  nom: "<#ffe08a>Lampe"
+  description: ["<gray>Éclaire comme une torche."]
+  modele: exemple/lampe
+  meuble:
+    lumiere: 15
+    luminosite: 15
+    rotation: 4
+    son-pose: block.lantern.place
+    son-casse: block.lantern.break
+  recette:
+    type: forme
+    forme: [" T ", " B ", " P "]
+    ingredients: { T: TORCH, B: STICK, P: OAK_SLAB }
+
+caisse:
+  materiau: PAPER
+  nom: "<#c8935a>Caisse de rangement"
+  description: ["<gray>Clic droit pour l'ouvrir (3 lignes)."]
+  modele: exemple/caisse
+  meuble:
+    stockage: 3
+    titre-stockage: "Caisse"
+    rotation: 4
+  recette:
+    type: forme
+    forme: ["PPP", "P P", "PPP"]
+    ingredients: { P: OAK_SLAB }
+
+table:
+  materiau: PAPER
+  nom: "<#c8935a>Grande table"
+  description: ["<gray>Prend deux blocs."]
+  modele: exemple/table
+  meuble:
+    hitbox: ["0,0,0", "1,0,0"]
+    rotation: 4
+  recette:
+    type: forme
+    forme: ["PPP", "B B"]
+    ingredients: { P: OAK_PLANKS, B: STICK }

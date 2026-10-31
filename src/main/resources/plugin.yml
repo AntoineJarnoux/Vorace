@@ -10,7 +10,7 @@ softdepend: [ModelEngine, MythicMobs]
 commands:
   vorace:
     description: Gestion du pack de ressources Vorace
-    usage: /vorace [reload|envoyer|info|sources|pack]
+    usage: /vorace [reload|envoyer|info|sources|give|objets|meuble|maj|pack]
     aliases: [vo]
 permissions:
   vorace.admin:

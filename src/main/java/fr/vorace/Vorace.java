@@ -7,6 +7,8 @@ import fr.vorace.hebergement.Hebergeur;
 import fr.vorace.hebergement.HebergeurExterne;
 import fr.vorace.hebergement.HebergeurMemePort;
 import fr.vorace.hebergement.HebergeurPortDedie;
+import fr.vorace.meubles.EcouteurMeubles;
+import fr.vorace.meubles.Meubles;
 import fr.vorace.objets.EcouteurObjets;
 import fr.vorace.objets.Objets;
 import fr.vorace.pack.Constructeur;
@@ -39,6 +41,7 @@ public final class Vorace extends JavaPlugin {
     private Surveillance surveillance;
     private Objets objets;
     private EcouteurObjets ecouteurObjets;
+    private Meubles meubles;
     private volatile String testHebergement;
 
     public Reglages reglages() { return reglages; }
@@ -47,6 +50,7 @@ public final class Vorace extends JavaPlugin {
     public Envoi envoi() { return envoi; }
     public Objets objets() { return objets; }
     public EcouteurObjets ecouteurObjets() { return ecouteurObjets; }
+    public Meubles meubles() { return meubles; }
     public String testHebergement() { return testHebergement; }
 
     @Override
@@ -74,6 +78,13 @@ public final class Vorace extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les actions des objets", t);
         }
+        try {
+            meubles = new Meubles(this);
+            Bukkit.getPluginManager().registerEvents(new EcouteurMeubles(this), this);
+            Bukkit.getScheduler().runTaskTimer(this, meubles::nettoyerSieges, 100L, 100L);
+        } catch (Throwable t) {
+            getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les meubles", t);
+        }
 
         PluginCommand cmd = getCommand("vorace");
         if (cmd != null) {
@@ -100,6 +111,9 @@ public final class Vorace extends JavaPlugin {
     @Override
     public void onDisable() {
         if (surveillance != null) surveillance.arreter();
+        if (meubles != null) {
+            try { meubles.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des meubles : " + t); }
+        }
         if (hebergeur != null) hebergeur.arreter();
         if (packs != null) packs.arreter();
     }
@@ -110,6 +124,7 @@ public final class Vorace extends JavaPlugin {
         reglages = Reglages.lire(getConfig());
         Messages.charger(getConfig());
         objets.charger(true);
+        rafraichirMeubles();
         if (!ancien.mode().equals(reglages.mode()) || ancien.portDedie() != reglages.portDedie()
             || !ancien.adressePublique().equals(reglages.adressePublique()) || ancien.portPublic() != reglages.portPublic()
             || !ancien.urlExterne().equals(reglages.urlExterne())) {
@@ -119,6 +134,17 @@ public final class Vorace extends JavaPlugin {
         }
         if (reglages.surveillance()) surveillance.demarrer(reglages.intervalleSecondes());
         else surveillance.arreter();
+    }
+
+    /** Met à jour l'apparence des meubles posés après un changement des objets. */
+    public void rafraichirMeubles() {
+        if (meubles == null) return;
+        try {
+            int n = meubles.rafraichirTout();
+            if (n > 0) getLogger().info(n + " meuble(s) mis à jour");
+        } catch (Throwable t) {
+            getLogger().warning("Mise à jour des meubles : " + t);
+        }
     }
 
     /** Reconstruit le pack puis l'envoie à ceux qui l'attendent (et à tous si la config le demande). */

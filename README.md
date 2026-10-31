@@ -61,6 +61,33 @@ epee_rubis:
 - `/vorace give <joueur> <objet> [quantité]`, `/vorace objets` (menu de tous les objets), `/vorace maj`.
 - API : `VoraceAPI.objet("epee_rubis", 1)`, `VoraceAPI.id(itemStack)`.
 
+### Meubles (0.3)
+
+Un meuble est un objet Vorace avec une section `meuble:` (exemples créés au premier démarrage :
+chaise, lampe, caisse de rangement, grande table) :
+
+```yaml
+chaise:
+  materiau: PAPER
+  nom: "<#c8935a>Chaise en bois"
+  modele: exemple/chaise          # modèle Blockbench, l'avant est la face « north »
+  meuble:
+    sieges: ["0, 0.6, 0"]         # x, hauteur de l'assise, z
+    rotation: 8                   # 4, 8, 16 ou libre
+```
+
+- **Poser** : clic droit sur un bloc avec l'objet, le meuble se tourne vers toi. Au sol, contre un mur ou au plafond (`pose: [sol, mur, plafond]`).
+- **Casser** : clic gauche, l'objet est rendu (sauf en créatif). Les protections (WorldGuard, claims...) sont respectées.
+- **Hitbox** : des blocs solides sur plusieurs cases (`hitbox: ["0,0,0", "1,0,0"]`, dans le repère du modèle Blockbench),
+  ou une hitbox non solide de la taille voulue (`hitbox: { largeur: 1, hauteur: 0.2 }`) pour les tapis et plantes.
+- **Sièges**, **lumière** (`lumiere: 15`, `luminosite: 15` pour un modèle toujours éclairé), **coffre** intégré
+  (`stockage: 3` lignes, le contenu reste dans le meuble), **commandes** au clic droit, sons, taille, décalage.
+- Rien à configurer côté pack : le meuble utilise le modèle de son objet. Quand tu modifies un meuble,
+  ceux déjà posés se mettent à jour.
+- `/vorace meuble` (liste), `/vorace meuble info|retirer [rayon]` (le plus proche), `/vorace meuble rafraichir`.
+- API : `VoraceAPI.poserMeuble(id, bloc, yaw)`, `VoraceAPI.meuble(entite)`, `VoraceAPI.retirerMeuble(entite)`,
+  événements `VoraceMeublePoseEvent` et `VoraceMeubleCasseEvent` (annulables).
+
 ## Installation
 
 1. Mets `Vorace-x.y.z.jar` dans `plugins/` et redémarre le serveur.
@@ -82,6 +109,7 @@ désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace give <joueur> <objet> [quantité]` | donne un objet Vorace |
 | `/vorace objets` | menu de tous les objets (clic = 1, Maj + clic = une pile) |
 | `/vorace maj` | met à jour les objets Vorace dans les inventaires des joueurs connectés |
+| `/vorace meuble [liste\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace pack` | (tous les joueurs) recevoir à nouveau le pack |
 
 Permissions : `vorace.admin` (op par défaut), `vorace.pack` (tout le monde).
@@ -117,6 +145,7 @@ Au démarrage, Vorace se télécharge lui-même le pack pour vérifier : la cons
 
 - `fr.vorace.api.VoracePackPretEvent` : le pack vient d'être (re)construit.
 - `fr.vorace.api.VoracePackChargeEvent` : un joueur a fini de charger le pack.
+- `fr.vorace.api.VoraceMeublePoseEvent`, `VoraceMeubleCasseEvent` : un meuble va être posé ou cassé (annulables).
 
 ## Compiler
 
@@ -130,12 +159,17 @@ La compilation automatique sur GitHub vérifie aussi 1.21.4, 1.21.11 et 26.2.
 
 ## Feuille de route
 
+Objectif : un Vorace complet qui fait tout ce que font Nexo, ItemsAdder, ModelEngine, ProtocolLib et MythicLib,
+en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, progression).
+
 1. ✅ Packs : fusion, hébergement, envoi
 2. ✅ Objets personnalisés (texture ou modèle 3D, propriétés, actions au clic, recettes)
-3. Meubles (modèles 3D posables, avec hitbox, sièges, lumières)
-4. Blocs personnalisés (minerais, décorations, avec outils et drops)
-5. Glyphes et emojis (chat, menus, scoreboard, titres), fonds de menus personnalisés
-6. Conversion automatique des configurations Nexo vers Vorace
+3. ✅ Meubles (modèles 3D posables, hitbox, sièges, lumières, coffres)
+4. Blocs personnalisés (minerais, décorations, avec outils, vitesse de minage et drops)
+5. Glyphes et emojis (chat, menus, Tab, titres), fonds de menus personnalisés
+6. Modèles animés : import direct des .bbmodel, animations, sur des entités
+7. Paquets et bibliothèque commune (entités visibles par un seul joueur, API pour VoraceMMO)
+8. Conversion automatique des configurations Nexo, ItemsAdder et ModelEngine
 
 ## Licence
 

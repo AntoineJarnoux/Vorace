@@ -11,6 +11,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.block.Block;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -74,6 +76,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 for (Player p : Bukkit.getOnlinePlayers()) n += plugin.ecouteurObjets().mettreAJour(p);
                 s.sendMessage(Messages.brut("<green>" + n + " objet(s) mis à jour dans les inventaires."));
             }
+            case "meuble", "meubles" -> meuble(s, a);
             case "info" -> info(s);
             case "sources" -> sources(s);
             default -> {
@@ -85,6 +88,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace give <joueur> <objet> [quantité]</white> <gray>donne un objet"));
                 s.sendMessage(Messages.brut("<white>/vorace objets</white> <gray>menu de tous les objets"));
                 s.sendMessage(Messages.brut("<white>/vorace maj</white> <gray>met à jour les objets dans les inventaires"));
+                s.sendMessage(Messages.brut("<white>/vorace meuble [liste|info|retirer|rafraichir]</white> <gray>gestion des meubles"));
                 s.sendMessage(Messages.brut("<white>/vorace pack</white> <gray>(joueurs) recevoir à nouveau le pack"));
             }
         }
@@ -107,6 +111,35 @@ public final class Commande implements CommandExecutor, TabCompleter {
             reste -= lot;
         }
         s.sendMessage(Messages.brut("<green>" + n + " × " + Messages.echapper(id) + " donné(s) à " + p.getName() + "."));
+    }
+
+    private void meuble(CommandSender s, String[] a) {
+        String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
+        switch (act) {
+            case "rafraichir" -> s.sendMessage(Messages.brut("<green>" + plugin.meubles().rafraichirTout() + " meuble(s) mis à jour."));
+            case "info", "retirer", "supprimer" -> {
+                if (!(s instanceof Player p)) { s.sendMessage(Messages.brut("<red>Commande réservée aux joueurs.")); return; }
+                double rayon = 5;
+                try { if (a.length > 2) rayon = Math.max(1, Math.min(32, Double.parseDouble(a[2]))); } catch (NumberFormatException ignore) { }
+                ItemDisplay m = plugin.meubles().plusProche(p.getLocation(), rayon);
+                if (m == null) { s.sendMessage(Messages.brut("<yellow>Aucun meuble à moins de " + (int) rayon + " blocs.")); return; }
+                String id = plugin.meubles().id(m);
+                if (act.equals("info")) {
+                    Block o = plugin.meubles().origine(m);
+                    s.sendMessage(Messages.brut("<white>" + Messages.echapper(id) + "</white> <gray>en <white>" + (o == null ? "?" : o.getX() + " " + o.getY() + " " + o.getZ())
+                        + "</white>" + (plugin.objets().definition(id) == null ? " <red>(objet supprimé de la config)" : "")));
+                } else {
+                    plugin.meubles().casser(null, m, false);
+                    s.sendMessage(Messages.brut("<green>Meuble " + Messages.echapper(id) + " retiré."));
+                }
+            }
+            default -> {
+                List<String> ids = new ArrayList<>();
+                for (DefinitionObjet d : plugin.objets().toutes()) if (d.meuble() != null) ids.add(d.id());
+                s.sendMessage(Messages.brut("<gray>" + ids.size() + " meuble(s) : <white>" + Messages.echapper(String.join(", ", ids))));
+                s.sendMessage(Messages.brut("<gray>/vorace meuble info|retirer [rayon] : le meuble le plus proche ; /vorace meuble rafraichir"));
+            }
+        }
     }
 
     private void info(CommandSender s) {
@@ -142,7 +175,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         List<String> r = new ArrayList<>();
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "envoyer", "maj", "info", "sources", "pack") : List.of("pack")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("reload", "give", "objets", "meuble", "envoyer", "maj", "info", "sources", "pack") : List.of("pack")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
@@ -150,6 +183,8 @@ public final class Commande implements CommandExecutor, TabCompleter {
             r.removeIf(x -> !x.toLowerCase(Locale.ROOT).startsWith(a[1].toLowerCase(Locale.ROOT)));
         } else if (a.length == 3 && a[0].equalsIgnoreCase("give") && s.hasPermission("vorace.admin")) {
             for (DefinitionObjet d : plugin.objets().toutes()) if (d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("meuble") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("liste", "info", "retirer", "rafraichir")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 2 && a[0].equalsIgnoreCase("envoyer") && s.hasPermission("vorace.admin")) {
             r.add("tous");
             Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName()));

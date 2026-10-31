@@ -403,17 +403,46 @@ public final class Objets {
 
     // ----------------------------------------------------------------- exemple
 
+    /**
+     * Installe chaque série d'exemples une seule fois (notée dans donnees/exemples.txt) :
+     * un serveur qui se met à jour reçoit les nouveaux exemples, et un exemple supprimé ne revient pas.
+     */
     private void installerExemple() {
         try {
             Files.createDirectories(dossierObjets());
             Files.createDirectories(dossierRessources().resolve("textures"));
             Files.createDirectories(dossierRessources().resolve("modeles"));
-            boolean vide;
-            try (Stream<Path> s = Files.list(dossierObjets())) { vide = s.findAny().isEmpty(); }
-            if (!vide) return;
-            copier("exemples/exemple.yml", dossierObjets().resolve("exemple.yml"));
-            copier("exemples/rubis.png", dossierRessources().resolve("textures/exemple/rubis.png"));
-            copier("exemples/epee_rubis.png", dossierRessources().resolve("textures/exemple/epee_rubis.png"));
+            Path liste = plugin.getDataFolder().toPath().resolve("donnees").resolve("exemples.txt");
+            List<String> faits = new ArrayList<>(Files.isRegularFile(liste) ? Files.readAllLines(liste) : List.of());
+            if (!Files.isRegularFile(liste)) {
+                // avant 0.3 : les exemples d'objets étaient installés seulement si le dossier était vide
+                boolean vide;
+                try (Stream<Path> s = Files.list(dossierObjets())) { vide = s.findAny().isEmpty(); }
+                if (!vide) faits.add("objets");
+            }
+            boolean change = false;
+            if (!faits.contains("objets")) {
+                copier("exemples/exemple.yml", dossierObjets().resolve("exemple.yml"));
+                copier("exemples/rubis.png", dossierRessources().resolve("textures/exemple/rubis.png"));
+                copier("exemples/epee_rubis.png", dossierRessources().resolve("textures/exemple/epee_rubis.png"));
+                faits.add("objets");
+                change = true;
+            }
+            if (!faits.contains("meubles")) {
+                copier("exemples/meubles.yml", dossierObjets().resolve("exemple-meubles.yml"));
+                for (String m : List.of("chaise", "lampe", "caisse", "table")) {
+                    copier("exemples/meubles/" + m + ".json", dossierRessources().resolve("modeles/exemple/" + m + ".json"));
+                }
+                for (String t : List.of("bois", "lampe")) {
+                    copier("exemples/meubles/" + t + ".png", dossierRessources().resolve("textures/exemple/" + t + ".png"));
+                }
+                faits.add("meubles");
+                change = true;
+            }
+            if (change) {
+                Files.createDirectories(liste.getParent());
+                Files.write(liste, faits);
+            }
         } catch (IOException e) {
             plugin.getLogger().warning("Impossible de créer les exemples d'objets : " + e.getMessage());
         }

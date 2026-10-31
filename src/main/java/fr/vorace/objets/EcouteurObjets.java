@@ -66,7 +66,7 @@ public final class EcouteurObjets implements Listener {
     }
 
     /** "console: give %joueur% diamond" ou "joueur: spawn" (par défaut : joueur). */
-    static void executer(Player p, String brut) {
+    public static void executer(Player p, String brut) {
         String c = brut.trim();
         boolean console = false;
         if (c.toLowerCase().startsWith("console:")) { console = true; c = c.substring(8).trim(); }
