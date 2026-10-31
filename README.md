@@ -4,6 +4,8 @@ Plugin **libre et gratuit** pour serveurs Paper (Minecraft **1.21 à 26.x**) : p
 objets, meubles, blocs et glyphes personnalisés. Le but est de pouvoir tout faire sans plugin payant,
 et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 
+> **Code écrit par une IA.** Vorace est développé par Claude (l'IA d'Anthropic), à la demande et sous la direction de Jules (ORA-KUN), qui teste et décide de ce qui est ajouté. Le code est ouvert pour que chacun puisse le relire, le corriger et l'améliorer.
+>
 > Vorace est écrit de zéro. Il ne contient aucun code d'un autre plugin.
 
 ## Ce que fait la version 0.1 (étape 1 : les packs)
