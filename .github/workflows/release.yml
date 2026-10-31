@@ -4,6 +4,12 @@ name: Release
 on:
   release:
     types: [published]
+  # pour (re)mettre le .jar sur une release déjà publiée : Actions > Release > Run workflow
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la release (ex : Vorace-0.1.0)"
+        required: true
 
 permissions:
   contents: write
@@ -13,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -27,4 +35,4 @@ jobs:
       - name: Ajouter le .jar à la release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" build/libs/Vorace-*.jar --clobber
+        run: gh release upload "${{ github.event.release.tag_name || inputs.tag }}" build/libs/Vorace-*.jar --clobber
