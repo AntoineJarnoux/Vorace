@@ -237,7 +237,8 @@ mouton:
   accroupi) ou de temps en temps, volent de point en point en virant, puis se posent ailleurs, toujours dans leur laisse.
   Les papillons volettent bas en zigzag. Animation de vol : rôle `vol` (par exemple `animations: { vol: fly }`).
   Avec `marche: 0.9` (blocs par seconde), un oiseau posé trottine au sol par petits pas sur du plat et s'arrête
-  pour picorer (`ennui: [peck]`) : pigeons de place, moineaux. Son animation `walk` se joue toute seule.
+  pour picorer (`ennui: [peck]`) : pigeons de place, moineaux. Son animation `walk` se joue toute seule. Quand un
+  joueur fait s'envoler un oiseau, ceux de la même espèce posés à moins de 8 blocs partent avec lui (volée).
 - **Décors vivants** (`type: decor`) : un modèle posé sans entité (bain d'oiseaux, nid, mangeoire), qui joue son
   `idle` en boucle et ses animations `ennui` de temps en temps. Avec `envol: 4` il joue `envol` quand un joueur
   approche ; s'il a aussi une animation `retour`, il reste en place (les oiseaux sont partis) et la joue 15 s après
@@ -248,7 +249,8 @@ mouton:
   poissons, abeilles, grenouilles) ou `ia: aucune`.
 - **Performances** : un mob loin de tout joueur (`mobs.distance-reflexion`, 64 blocs) ne réfléchit pas ; les autres
   réfléchissent deux fois par seconde, chacun à son tour. Les besoins sont gardés avec l'entité.
-- `/vorace mob [liste|invoquer <mob> [nombre]|info|apparitions|retirer|recharger]`.
+- `/vorace mob [liste|invoquer <mob> [nombre]|info [début du nom]|apparitions|retirer|recharger]` ; `info` donne pour chaque
+  mob son action, ses besoins, sa distance à la maison et la distance parcourue depuis son apparition.
 - API : `VoraceAPI.invoquerMob`, `mobVorace`, `actionMob`, `effrayerMob` ; événement `VoraceMobActionEvent`
   à chaque changement d'action.
 

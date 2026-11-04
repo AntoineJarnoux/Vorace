@@ -86,6 +86,23 @@ lapin_createf:
   detection: 24
   laisse: 10
 MOBS
+# zoo : un mob de chaque sorte réglé comme les animaux d'Orario (sans leurs modèles), pour vérifier qu'ils bougent tout seuls
+cat > plugins/Vorace/mobs/zoo.yml <<'ZOO'
+zoo_mouton: { type: sheep, caractere: paisible, troupeau: { cohesion: 6 }, laisse: 18, nourriture: [grass_block, short_grass] }
+zoo_vache: { type: cow, caractere: paisible, troupeau: { cohesion: 7 }, laisse: 20, nourriture: [grass_block, short_grass] }
+zoo_cochon: { type: pig, caractere: paisible, troupeau: { cohesion: 6 }, laisse: 12, nourriture: [grass_block, short_grass] }
+zoo_cheval: { type: horse, caractere: paisible, troupeau: { cohesion: 8 }, laisse: 14, nourriture: [grass_block, short_grass] }
+zoo_poule: { type: chicken, caractere: craintif, detection: 5, laisse: 10, nourriture: [grass_block, short_grass] }
+zoo_chat: { type: cat, caractere: craintif, activite: toujours, detection: 5, laisse: 18, boit: false }
+zoo_lapin: { type: rabbit, caractere: craintif, detection: 10, laisse: 16, vitesse: 1.2, nourriture: [short_grass, grass_block] }
+zoo_renard: { type: fox, caractere: craintif, activite: toujours, detection: 12, laisse: 24, nourriture: [grass_block] }
+zoo_cerf: { type: cow, caractere: craintif, detection: 16, laisse: 28, vitesse: 1.3, silencieux: true, nourriture: [grass_block, short_grass] }
+zoo_sanglier: { type: pig, caractere: territorial, activite: toujours, laisse: 24, degats: 4, vie: 20, nourriture: [grass_block] }
+zoo_ecureuil: { type: rabbit, caractere: craintif, detection: 8, laisse: 12, vitesse: 1.3, silencieux: true, boit: false, nourriture: [grass_block] }
+zoo_chevre: { type: goat, caractere: territorial, ia: jeu, laisse: 24 }
+zoo_pigeon: { type: bat, vol: oiseau, marche: 0.9, envol: 1, laisse: 20, silencieux: true }
+zoo_papillon: { type: bat, vol: papillon, envol: 1, laisse: 10, silencieux: true }
+ZOO
 echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
 online-mode=false
@@ -108,7 +125,7 @@ attendre() { # attendre <motif> <fichier> <secondes>
 }
 if ! attendre 'Done (' journal.txt 400; then echo "Le serveur n'a pas démarré"; tail -80 journal.txt; exit 1; fi
 cmd "vorace modele"
-node "$OUTILS/essai-bot.mjs" 48 $CLIENT > bot.txt 2>&1 &
+node "$OUTILS/essai-bot.mjs" 100 $CLIENT > bot.txt 2>&1 &
 BOT=$!
 attendre 'BOT CONNECTE' bot.txt 60 || { echo "Le faux joueur ne s'est pas connecté"; cat bot.txt; }
 sleep 2
@@ -153,6 +170,13 @@ sleep 4
 cmd "vorace mob info"
 sleep 3
 cmd "vorace mob info"
+# zoo, joueur toujours en créatif et immobile : 45 s pour voir chaque sorte bouger toute seule
+for m in mouton vache cochon cheval poule chat lapin renard cerf sanglier ecureuil chevre pigeon papillon; do cmd "vorace mob invoquer zoo_$m"; done
+cmd "time set 1000"
+sleep 22
+cmd "vorace mob info zoo_"
+sleep 23
+cmd "vorace mob info zoo_"
 # couche paquets : heure remplacée par midi, un message bloqué, un autre qui passe
 cmd "gamerule doDaylightCycle false"
 cmd "time set 18000"
@@ -214,6 +238,15 @@ echo "$MOBS_VUS" | grep -q 'mob=lapin_createf action=fuir' || { echo "ECHEC : en
 PIED=$(grep -ao 'mob=pigeon_essai .*a-pied=[0-9.]*' journal.txt | grep -ao 'a-pied=[0-9.]*' | cut -d= -f2 | sort -g | tail -1)
 echo "pigeon : ${PIED:-0} blocs à pied"
 awk -v p="${PIED:-0}" 'BEGIN {exit !(p > 0.5)}' || { echo "ECHEC : en créatif, le pigeon ne marche pas"; exit 1; }
+echo "===== Zoo (joueur en créatif, 45 s) : distance parcourue par chaque mob"
+ZOO_KO=0
+for m in mouton vache cochon cheval poule chat lapin renard cerf sanglier ecureuil chevre pigeon papillon; do
+  D=$(grep -ao "mob=zoo_$m .*parcouru=[0-9.]*" journal.txt | grep -ao 'parcouru=[0-9.]*' | cut -d= -f2 | sort -g | tail -1)
+  ACTIONS=$(grep -ao "mob=zoo_$m action=[a-z]*" journal.txt | cut -d= -f3 | sort -u | tr '\n' ' ')
+  printf 'zoo_%-10s %6s blocs   actions : %s\n' "$m" "${D:-0}" "$ACTIONS"
+  awk -v p="${D:-0}" 'BEGIN {exit !(p > 1.0)}' || ZOO_KO=1
+done
+[ $ZOO_KO = 0 ] || { echo "ECHEC : une sorte de mob ne bouge pas toute seule en 45 s"; exit 1; }
 if grep -ao 'maison=[0-9.]*/[0-9]*' journal.txt | awk -F'[=/]' '$2 > $3 + 2 {bad=1} END {exit !bad}'; then echo "ECHEC : un mob est sorti de sa laisse"; exit 1; fi
 grep -aq 'taille=1.50 vue=proche' journal.txt || { echo "ECHEC : taille du modèle ou portée d'affichage"; exit 1; }
 grep -aq 'ESSAI PAQUETS heures-modifiees=[1-9][0-9]* messages-bloques=[1-9][0-9]* paquets-recus=[1-9][0-9]* erreurs=0' journal.txt || { echo "ECHEC : couche paquets (côté serveur)"; exit 1; }

@@ -186,6 +186,9 @@ public final class Mobs {
         /** Volants : pilote de vol, et vrai si un joueur est assez près pour qu'il bouge. */
         Vol vol;
         boolean actif;
+        /** Distance parcourue (au sol ou en vol) depuis son apparition, et dernière position vue. */
+        double parcouru;
+        double avantX = Double.NaN, avantZ;
 
         Suivi(Entity e, DefinitionMob d) {
             this.e = e;
@@ -204,7 +207,8 @@ public final class Mobs {
             return String.format(Locale.ROOT, "mob=%s action=%s faim=%.2f soif=%.2f fatigue=%.2f peur=%.2f colere=%.2f maison=%.1f/%.0f%s%s",
                 d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
                 Geometrie.distance(l.getX(), l.getZ(), mx, mz), laisse, troupeau == null ? "" : " troupeau=" + troupeau,
-                apparition == null ? "" : " apparition=" + apparition) + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "");
+                apparition == null ? "" : " apparition=" + apparition) + String.format(Locale.ROOT, " parcouru=%.1f", parcouru)
+                + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "");
         }
     }
 
@@ -541,6 +545,11 @@ public final class Mobs {
     private void penser(Suivi s, double dt) {
         Entity e = s.e;
         Location l = e.getLocation();
+        if (!Double.isNaN(s.avantX)) {
+            double pas = Math.hypot(l.getX() - s.avantX, l.getZ() - s.avantZ);
+            if (pas < 8) s.parcouru += pas;            // au-delà : téléportation, pas un déplacement
+        }
+        s.avantX = l.getX(); s.avantZ = l.getZ();
         double[] dd = new double[1];
         Player proche = joueurProche(e, distanceReflexion, dd);
         Modeles.Instance modele = plugin.modeles() == null ? null : plugin.modeles().instance(e);
@@ -551,7 +560,17 @@ public final class Mobs {
             double env = s.d.envol() > 0 ? s.d.envol() : s.d.detection();
             Location pl = proche.getLocation();
             double dj = Math.sqrt(dd[0]);
-            if (dj < env * (proche.isSneaking() ? 0.5 : 1)) s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld()), s.mx, s.mz, s.laisse);
+            if (dj < env * (proche.isSneaking() ? 0.5 : 1) && !s.vol.enVol()) {
+                s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld()), s.mx, s.mz, s.laisse);
+                // la volée part ensemble : les oiseaux de la même espèce posés à moins de 8 blocs s'envolent aussi
+                for (Suivi o : suivis.values()) {
+                    if (o != s && o.vol != null && o.d == s.d && !o.vol.enVol() && o.e.getWorld().equals(e.getWorld())
+                        && o.e.getLocation().distanceSquared(l) < 64) {
+                        o.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld()), o.mx, o.mz, o.laisse);
+                        o.actif = true;
+                    }
+                }
+            }
             if (modele != null) {
                 String an = s.d.animation("vol");
                 if (s.vol.enVol() && an != null && !an.equals(s.boucle)) { modele.jouer(an, true); s.boucle = an; }

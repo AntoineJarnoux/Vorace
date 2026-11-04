@@ -494,7 +494,9 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "info" -> {
                 s.sendMessage(Messages.brut("<gray>" + m.suivis().size() + " mob(s) de Vorace chargé(s)"
                     + (m.derniereErreur() == null ? "" : ", dernière erreur : <red>" + Messages.echapper(m.derniereErreur()))));
-                List<fr.vorace.mobs.Mobs.Suivi> proches = m.proches(ici, 32, 16);
+                String filtre = a.length > 2 ? a[2].toLowerCase(Locale.ROOT) : null;
+                List<fr.vorace.mobs.Mobs.Suivi> proches = filtre == null ? m.proches(ici, 32, 16)
+                    : m.proches(ici, 48, 1000).stream().filter(x -> x.definition().id().startsWith(filtre)).limit(48).toList();
                 if (proches.isEmpty()) { s.sendMessage(Messages.brut("<yellow>Aucun mob de Vorace à moins de 32 blocs.")); return; }
                 for (fr.vorace.mobs.Mobs.Suivi x : proches) s.sendMessage(Messages.brut("<white>" + Messages.echapper(x.etat())));
             }
@@ -524,7 +526,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                     + " point(s) d'apparition, " + m.suivis().size() + " mob(s) chargé(s) :"));
                 for (fr.vorace.mobs.DefinitionMob d : m.definitions()) s.sendMessage(Messages.brut("<white> " + Messages.echapper(d.id()) + " <gray>("
                     + Messages.echapper(d.type()) + ", " + d.caractere().name().toLowerCase(Locale.ROOT) + (d.modeles().isEmpty() ? "" : ", modèle " + Messages.echapper(String.join("/", d.modeles()))) + ")"));
-                s.sendMessage(Messages.brut("<gray>/vorace mob invoquer <mob> [nombre] | info | apparitions | retirer [rayon] | recharger"));
+                s.sendMessage(Messages.brut("<gray>/vorace mob invoquer <mob> [nombre] | info [début du nom] | apparitions | retirer [rayon] | recharger"));
             }
         }
     }
