@@ -232,6 +232,10 @@ mouton:
   il prend peur ou se fâche, `ennui` de temps en temps au repos. Marche, course, dégâts et mort restent automatiques.
 - **Points d'apparition** (`apparitions/*.yml`) : une population gardée autour d'un endroit, qui devient la maison
   de ces mobs ; un mob mort est remplacé après un délai. Rien n'apparaît sans joueur à moins de 96 blocs.
+- **Volants** (`vol: oiseau` ou `vol: papillon`, `altitude: [4, 12]`) : de vrais mobs, qu'on peut taper, posés au sol,
+  sur un toit ou une branche ; ils s'envolent quand un joueur approche (`envol: 5`, deux fois moins loin s'il est
+  accroupi) ou de temps en temps, volent de point en point en virant, puis se posent ailleurs, toujours dans leur laisse.
+  Les papillons volettent bas en zigzag. Animation de vol : rôle `vol` (par exemple `animations: { vol: fly }`).
 - **Décors vivants** (`type: decor`) : un modèle posé sans entité (pigeons, papillons), qui peut s'envoler quand
   un joueur approche (`envol: 4`, animation `envol`) puis réapparaître plus tard.
 - **IA** : `ia: vorace` (le cerveau remplace l'IA de déplacement du jeu), `ia: jeu` (l'IA du jeu, gardée en laisse :

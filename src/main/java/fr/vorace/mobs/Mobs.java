@@ -183,6 +183,9 @@ public final class Mobs {
         String boucle;
         double distMenacePrec = Double.NaN;
         Player menace;
+        /** Volants : pilote de vol, et vrai si un joueur est assez près pour qu'il bouge. */
+        Vol vol;
+        boolean actif;
 
         Suivi(Entity e, DefinitionMob d) {
             this.e = e;
@@ -196,8 +199,10 @@ public final class Mobs {
 
         public String etat() {
             Location l = e.getLocation();
+            String act = vol != null ? (vol.etat() == Vol.Etat.POSE ? "pose" : vol.etat() == Vol.Etat.VOL ? "vole" : "atterrit")
+                : c.action().name().toLowerCase(Locale.ROOT);
             return String.format(Locale.ROOT, "mob=%s action=%s faim=%.2f soif=%.2f fatigue=%.2f peur=%.2f colere=%.2f maison=%.1f/%.0f%s%s",
-                d.id(), c.action().name().toLowerCase(Locale.ROOT), c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
+                d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
                 Geometrie.distance(l.getX(), l.getZ(), mx, mz), laisse, troupeau == null ? "" : " troupeau=" + troupeau,
                 apparition == null ? "" : " apparition=" + apparition);
         }
@@ -254,6 +259,13 @@ public final class Mobs {
             s.zone = z == null ? null : zones.get(z);
             s.c.relire(pdc.get(cleBesoins, PersistentDataType.STRING));
             if (d.cerveau() && e instanceof Mob mob) libererIA(mob);
+            if (d.volant()) {
+                e.setGravity(false);
+                if (e instanceof Mob mob) mob.setAware(false);
+                double vit = (d.vol().equals("papillon") ? 1.6 : 6.5) * d.vitesse();
+                s.vol = new Vol(e.getUniqueId().getMostSignificantBits(), d.vol().equals("papillon"), vit, d.altMin(), d.altMax(),
+                    l.getX(), l.getY(), l.getZ());
+            }
             suivis.put(e.getUniqueId(), s);
             if (s.apparition != null) {
                 EtatApparition et = registre.computeIfAbsent(s.apparition, k -> new EtatApparition());
@@ -308,6 +320,10 @@ public final class Mobs {
         if (s == null) return;
         s.c.blesser(s.d.caractere());
         if (par != null) s.menace = par;
+        if (s.vol != null) {
+            Location m = par != null ? par.getLocation() : e.getLocation();
+            s.vol.effrayer(m.getX(), m.getZ(), sol(e.getWorld()), s.mx, s.mz, s.laisse);
+        }
         if (s.troupeau != null && s.c.peur() > 0.5) {
             for (Suivi o : troupeaux.getOrDefault(s.troupeau, List.of())) {
                 if (o != s && o.e.getWorld().equals(e.getWorld()) && o.e.getLocation().distanceSquared(e.getLocation()) < 256) o.c.effrayer(0.8);
@@ -481,6 +497,10 @@ public final class Mobs {
         }
         if (tic % 600 == 0 && registreModifie) sauverRegistre();
         if (tic % 1200 == 0) for (Suivi s : suivis.values()) sauverBesoins(s);
+        for (Suivi s : suivis.values()) {
+            if (s.vol == null || !s.actif || !s.e.isValid()) continue;
+            try { voler(s); } catch (Throwable ex) { erreur(s.d.id(), ex); }
+        }
         for (Suivi s : new ArrayList<>(suivis.values())) {
             if ((tic + (s.e.getUniqueId().hashCode() & 0xFFFF)) % 10 != 0) continue;
             try {
@@ -521,6 +541,24 @@ public final class Mobs {
         Player proche = joueurProche(e, distanceReflexion, dd);
         Modeles.Instance modele = plugin.modeles() == null ? null : plugin.modeles().instance(e);
 
+        if (s.vol != null) {
+            s.actif = proche != null;
+            if (proche == null) return;
+            double env = s.d.envol() > 0 ? s.d.envol() : s.d.detection();
+            Location pl = proche.getLocation();
+            double dj = Math.sqrt(dd[0]);
+            if (dj < env * (proche.isSneaking() ? 0.5 : 1)) s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld()), s.mx, s.mz, s.laisse);
+            if (modele != null) {
+                String an = s.d.animation("vol");
+                if (s.vol.enVol() && an != null && !an.equals(s.boucle)) { modele.jouer(an, true); s.boucle = an; }
+                else if (!s.vol.enVol() && s.boucle != null) { modele.arreterAnimation(); s.boucle = null; }
+                else if (!s.vol.enVol() && !s.d.ennui().isEmpty() && tic >= s.prochainEnnui) {
+                    s.prochainEnnui = tic + 100 + hasard.nextInt(200);
+                    modele.jouer(s.d.ennui().get(hasard.nextInt(s.d.ennui().size())), false);
+                }
+            }
+            return;
+        }
         if (s.d.decor()) {
             if (s.d.envol() <= 0) return;
             if (s.envolFin < 0 && proche != null && dd[0] < s.d.envol() * s.d.envol()) {
@@ -611,6 +649,29 @@ public final class Mobs {
             }
         }
         agir(s, mob, modele, action, menace, centre, l);
+    }
+
+    /** Hauteur du sol pour les volants : dessus du bloc le plus haut (toit, branche), pas sur l'eau. */
+    static Vol.Sol sol(World w) {
+        return (x, z) -> {
+            int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
+            if (!w.isChunkLoaded(bx >> 4, bz >> 4)) return Double.NaN;
+            Block b = w.getHighestBlockAt(bx, bz);
+            if (b.isLiquid()) return Double.NaN;
+            return b.getY() + 1;
+        };
+    }
+
+    /** Un pas de vol (chaque tic) : l'entité de base suit le pilote, le modèle suit l'entité. */
+    private void voler(Suivi s) {
+        Entity e = s.e;
+        Vol v = s.vol;
+        double x0 = v.x(), y0 = v.y(), z0 = v.z();
+        v.pas(0.05, sol(e.getWorld()), s.mx, s.mz, s.laisse);
+        if (Math.abs(v.x() - x0) + Math.abs(v.y() - y0) + Math.abs(v.z() - z0) < 1e-4) return;
+        Location l = new Location(e.getWorld(), v.x(), v.y(), v.z(), v.yaw(), 0);
+        e.teleport(l);
+        e.setVelocity(new org.bukkit.util.Vector());
     }
 
     private void agir(Suivi s, Mob mob, Modeles.Instance modele, Action action, Player menace, double[] centre, Location l) {

@@ -44,6 +44,33 @@ lapin_essai:
   caractere: craintif
   detection: 24
   laisse: 10
+oiseau_essai:
+  type: bat
+  modele: golem_rubis
+  taille: [0.3, 0.3]
+  vol: oiseau
+  envol: 40
+  laisse: 14
+  silencieux: true
+cochon_essai:
+  type: pig
+  troupeau: { cohesion: 5 }
+  laisse: 10
+  nourriture: [grass_block, short_grass]
+poule_essai:
+  type: chicken
+  caractere: craintif
+  detection: 24
+  laisse: 10
+chat_essai:
+  type: cat
+  caractere: craintif
+  detection: 24
+  laisse: 10
+chevre_essai:
+  type: goat
+  ia: jeu
+  laisse: 8
 MOBS
 echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
@@ -98,6 +125,8 @@ cmd "vorace modele stop"
 # mobs : troupeau avec modèle et lapin craintif, à 8 blocs du faux joueur
 cmd "vorace mob invoquer golem_paisible 3"
 cmd "vorace mob invoquer lapin_essai"
+for m in oiseau_essai poule_essai chat_essai chevre_essai; do cmd "vorace mob invoquer $m"; done
+cmd "vorace mob invoquer cochon_essai 2"
 sleep 5
 cmd "vorace mob info"
 sleep 3
@@ -155,6 +184,10 @@ MOBS_VUS=$(grep -ao 'mob=[a-z_]* action=[a-z]*' journal.txt | sort -u)
 echo "mobs vus : $MOBS_VUS"
 echo "$MOBS_VUS" | grep -q 'mob=golem_paisible' || { echo "ECHEC : les golems de l'essai ne pensent pas"; exit 1; }
 echo "$MOBS_VUS" | grep -q 'mob=lapin_essai action=fuir' || { echo "ECHEC : le lapin craintif ne fuit pas le joueur"; exit 1; }
+echo "$MOBS_VUS" | grep -q 'mob=oiseau_essai action=vole' || { echo "ECHEC : l'oiseau ne s'envole pas"; exit 1; }
+echo "$MOBS_VUS" | grep -q 'mob=poule_essai action=fuir' || { echo "ECHEC : la poule ne fuit pas"; exit 1; }
+echo "$MOBS_VUS" | grep -q 'mob=chat_essai action=fuir' || { echo "ECHEC : le chat ne fuit pas"; exit 1; }
+for m in cochon_essai chevre_essai; do echo "$MOBS_VUS" | grep -q "mob=$m" || { echo "ECHEC : $m absent"; exit 1; }; done
 if grep -ao 'maison=[0-9.]*/[0-9]*' journal.txt | awk -F'[=/]' '$2 > $3 + 2 {bad=1} END {exit !bad}'; then echo "ECHEC : un mob est sorti de sa laisse"; exit 1; fi
 grep -aq 'taille=1.50 vue=proche' journal.txt || { echo "ECHEC : taille du modèle ou portée d'affichage"; exit 1; }
 grep -aq 'ESSAI PAQUETS heures-modifiees=[1-9][0-9]* messages-bloques=[1-9][0-9]* paquets-recus=[1-9][0-9]* erreurs=0' journal.txt || { echo "ECHEC : couche paquets (côté serveur)"; exit 1; }

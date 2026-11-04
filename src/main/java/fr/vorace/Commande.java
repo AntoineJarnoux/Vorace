@@ -494,7 +494,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "info" -> {
                 s.sendMessage(Messages.brut("<gray>" + m.suivis().size() + " mob(s) de Vorace chargé(s)"
                     + (m.derniereErreur() == null ? "" : ", dernière erreur : <red>" + Messages.echapper(m.derniereErreur()))));
-                List<fr.vorace.mobs.Mobs.Suivi> proches = m.proches(ici, 32, 8);
+                List<fr.vorace.mobs.Mobs.Suivi> proches = m.proches(ici, 32, 16);
                 if (proches.isEmpty()) { s.sendMessage(Messages.brut("<yellow>Aucun mob de Vorace à moins de 32 blocs.")); return; }
                 for (fr.vorace.mobs.Mobs.Suivi x : proches) s.sendMessage(Messages.brut("<white>" + Messages.echapper(x.etat())));
             }

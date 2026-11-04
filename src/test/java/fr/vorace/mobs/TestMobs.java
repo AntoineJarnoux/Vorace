@@ -213,6 +213,41 @@ public final class TestMobs {
         verifier(ap != null && ap.nombre() == 4 && ap.troupeau() && ap.x() == 1 && ap.z() == 3 && ap.monde().equals("world") && ap.reapparition() == 300, "apparition lue");
         verifier(Apparition.lire("q", yf.getConfigurationSection("q"), pb) == null && pb.size() == 1, "apparition sans centre refusée");
 
+        // vol des oiseaux et des papillons (sol plat en y 64, un toit de 6 de haut entre x 10 et 14)
+        Vol.Sol plat = (x, z) -> (x >= 10 && x < 14) ? 70 : 64;
+        Vol vole = new Vol(1, false, 6.5, 4, 12, 0, 64, 0);
+        verifier(vole.etat() == Vol.Etat.POSE, "oiseau posé au départ");
+        vole.effrayer(-3, 0, plat, 0, 0, 30);
+        verifier(vole.etat() == Vol.Etat.VOL, "un joueur approche : il s'envole");
+        double hMax = 0, hMin = 999, loinMax = 0;
+        boolean pose = false, auSol = true, revole = false;
+        for (int i = 0; i < 20 * 120; i++) {
+            vole.pas(0.05, plat, 0, 0, 30);
+            if (vole.etat() == Vol.Etat.VOL) {
+                double h = vole.y() - plat.hauteur(vole.x(), vole.z());
+                hMax = Math.max(hMax, h); hMin = Math.min(hMin, h);
+                if (pose) revole = true;
+            }
+            loinMax = Math.max(loinMax, Math.hypot(vole.x(), vole.z()));
+            if (vole.etat() == Vol.Etat.POSE && i > 40) {
+                pose = true;
+                if (Math.abs(vole.y() - plat.hauteur(vole.x(), vole.z())) > 1e-6) auSol = false;
+            }
+        }
+        verifier(hMin >= -0.01 && hMax <= 16, "en vol : jamais dans le sol, pas trop haut (" + String.format("%.1f à %.1f", hMin, hMax) + " blocs)");
+        verifier(loinMax <= 30.5, "reste dans sa laisse (" + String.format("%.1f", loinMax) + " / 30)");
+        verifier(pose && auSol, "se repose ailleurs, sur le sol ou un toit");
+        verifier(revole, "repart de lui-même après un moment");
+        Vol pap = new Vol(2, true, 1.6, 0.5, 2.5, 0, 64, 0);
+        pap.effrayer(-1, 0, plat, -20, 0, 8);
+        double papMax = 0;
+        for (int i = 0; i < 20 * 60; i++) { pap.pas(0.05, plat, -20, 0, 8); if (pap.enVol()) papMax = Math.max(papMax, pap.y() - plat.hauteur(pap.x(), pap.z())); }
+        verifier(papMax < 4.5, "papillon : volette bas (" + String.format("%.1f", papMax) + " blocs au plus)");
+        YamlConfiguration yv = YamlConfiguration.loadConfiguration(new java.io.StringReader("p: { type: bat, vol: oiseau, altitude: [3, 8], envol: 5, animations: { vol: fly } }"));
+        pb.clear();
+        DefinitionMob pg = DefinitionMob.lire("p", yv.getConfigurationSection("p"), pb);
+        verifier(pb.isEmpty() && pg.volant() && !pg.cerveau() && pg.altMin() == 3 && pg.altMax() == 8 && "fly".equals(pg.animation("vol")), "pigeon volant lu");
+
         System.out.println(echecs == 0 ? "TOUS LES TESTS PASSENT" : echecs + " ECHEC(S)");
         System.exit(echecs == 0 ? 0 : 1);
     }
