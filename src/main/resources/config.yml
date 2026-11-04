@@ -83,6 +83,17 @@ modeles:
   # Modèles animés (plugins/Vorace/modeles-animes/*.bbmodel) : nombre de tics entre deux images de l'animation.
   # 1 = le plus fluide, 2 = deux fois moins de données envoyées aux joueurs (le jeu adoucit entre les images).
   intervalle-tics: 2
+  # Les parties d'un modèle n'existent que si un joueur est à moins de tant de blocs (0 = toujours).
+  # Au-delà de la moitié de cette distance, les images sont envoyées deux fois moins souvent.
+  distance-affichage: 48
+  # Durée du fondu entre deux animations (repos -> marche, entrée et sortie de « degat »...). 0 = coupure nette.
+  fondu-secondes: 0.2
+  # Les os de tête (« h_... », « head », « tete ») suivent le regard du mob.
+  suivi-tete: true
+  # Le modèle rougit un instant quand son mob est touché (1.21.4 et plus).
+  teinte-degats: true
+  # Sons et particules des clés « Effets » des animations de Blockbench.
+  effets: true
 
 surveillance:
   # Reconstruit le pack tout seul quand un pack source ou un objet change (par exemple après /meg reload).

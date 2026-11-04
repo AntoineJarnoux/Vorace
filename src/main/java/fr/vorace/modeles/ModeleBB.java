@@ -28,6 +28,17 @@ public record ModeleBB(String id, List<Partie> parties, List<Texture> textures, 
      */
     public record Partie(String nom, String uuid, int parent, double[] pivot, double[] rotation, List<Cube> cubes, double echelle) {
         public boolean visible() { return !cubes.isEmpty(); }
+
+        /** Os de tête (convention de ModelEngine : nom commençant par « h_ », ou « head », « tete ») : suit le regard du mob. */
+        public boolean tete() {
+            String n = nom == null ? "" : nom.toLowerCase(java.util.Locale.ROOT);
+            return n.startsWith("h_") || n.equals("head") || n.equals("tete") || n.equals("tête");
+        }
+
+        /** Os de nom (« tag_... ») : le nom du mob s'affiche à cet endroit. */
+        public boolean etiquette() {
+            return nom != null && nom.toLowerCase(java.util.Locale.ROOT).startsWith("tag_");
+        }
     }
 
     /**
@@ -41,14 +52,32 @@ public record ModeleBB(String id, List<Partie> parties, List<Texture> textures, 
     /** @param uv en pixels de la texture ; @param texture index dans textures() */
     public record Face(double[] uv, int texture, int rotation) {}
 
-    public record Texture(String nom, byte[] png, int largeurUV, int hauteurUV) {}
+    /**
+     * @param imageTics   durée d'une image en tics pour une texture animée (frame_time de Blockbench)
+     * @param interpolee  images fondues entre elles (frame_interpolate de Blockbench)
+     */
+    public record Texture(String nom, byte[] png, int largeurUV, int hauteurUV, int imageTics, boolean interpolee) {
+        public Texture(String nom, byte[] png, int largeurUV, int hauteurUV) { this(nom, png, largeurUV, hauteurUV, 1, false); }
+    }
 
     /** @param boucle « loop », « once » ou « hold » */
-    public record Animation(String nom, double duree, String boucle, Map<String, Canaux> os) {}
+    public record Animation(String nom, double duree, String boucle, Map<String, Canaux> os, List<Evenement> evenements) {
+        public Animation(String nom, double duree, String boucle, Map<String, Canaux> os) { this(nom, duree, boucle, os, List.of()); }
+    }
+
+    /**
+     * Clé d'effet d'une animation (piste « Effets » de Blockbench).
+     * @param type   « sound », « particle » ou « timeline »
+     * @param valeur nom du son ou de la particule, ou script de la clé « timeline »
+     */
+    public record Evenement(double temps, String type, String valeur) {}
 
     /** Clés d'un os : position, rotation, échelle (listes triées par temps). */
     public record Canaux(List<Cle> position, List<Cle> rotation, List<Cle> echelle) {}
 
     /** @param interpolation linear, catmullrom ou step */
-    public record Cle(double temps, double x, double y, double z, String interpolation) {}
+    /** @param expressions expressions Molang de x, y, z (null quand ce sont des nombres) */
+    public record Cle(double temps, double x, double y, double z, String interpolation, Molang[] expressions) {
+        public Cle(double temps, double x, double y, double z, String interpolation) { this(temps, x, y, z, interpolation, null); }
+    }
 }

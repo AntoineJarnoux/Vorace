@@ -57,7 +57,9 @@ public final class LecteurBBModel {
                     try { png = Base64.getDecoder().decode(source.substring(virgule + 1)); } catch (IllegalArgumentException ignore) { }
                 }
                 if (png == null) problemes.add(id + " : la texture « " + nom + " » n'est pas enregistrée dans le .bbmodel (dans Blockbench : clic droit sur la texture > Enregistrer dans le projet, ou « Fichier > Enregistrer le projet » avec les textures intégrées)");
-                textures.add(new Texture(nom, png, (int) nombre(t, "uv_width", resL), (int) nombre(t, "uv_height", resH)));
+                int imageTics = (int) Math.max(1, nombre(t, "frame_time", 1));
+                boolean interpolee = t.has("frame_interpolate") && t.get("frame_interpolate").isJsonPrimitive() && t.get("frame_interpolate").getAsBoolean();
+                textures.add(new Texture(nom, png, (int) nombre(t, "uv_width", resL), (int) nombre(t, "uv_height", resH), imageTics, interpolee));
             }
         }
 
@@ -114,11 +116,17 @@ public final class LecteurBBModel {
                 String nom = texte(a, "name", "animation").toLowerCase(Locale.ROOT);
                 if (nom.startsWith("animation.")) nom = nom.substring(nom.lastIndexOf('.') + 1); // « animation.modele.marche »
                 Map<String, Canaux> os = new HashMap<>();
+                List<ModeleBB.Evenement> evenements = new ArrayList<>();
                 JsonObject animateurs = objet(a, "animators");
                 if (animateurs != null) {
                     for (Map.Entry<String, JsonElement> an : animateurs.entrySet()) {
                         JsonObject o = an.getValue().getAsJsonObject();
-                        if (!texte(o, "type", "bone").equals("bone")) continue;
+                        String type = texte(o, "type", "bone");
+                        if (type.equals("effect")) {
+                            lireEffets(o, evenements);
+                            continue;
+                        }
+                        if (!type.equals("bone")) continue;
                         List<Cle> pos = new ArrayList<>(), rot = new ArrayList<>(), ech = new ArrayList<>();
                         JsonArray cles = tableau(o, "keyframes");
                         if (cles != null) {
@@ -129,8 +137,15 @@ public final class LecteurBBModel {
                                 JsonObject pt = pts.get(0).getAsJsonObject();
                                 String canal = texte(kf, "channel", "rotation");
                                 double defaut = canal.equals("scale") ? 1 : 0;
-                                Cle cle = new Cle(nombre(kf, "time", 0), valeur(pt, "x", defaut, problemes, id, nom), valeur(pt, "y", defaut, problemes, id, nom),
-                                    valeur(pt, "z", defaut, problemes, id, nom), texte(kf, "interpolation", "linear"));
+                                Molang[] expr = new Molang[3];
+                                double[] v = new double[3];
+                                boolean variable = false;
+                                for (int c = 0; c < 3; c++) {
+                                    Object r = valeur(pt, "xyz".substring(c, c + 1), defaut, problemes, id, nom);
+                                    if (r instanceof Molang mo) { expr[c] = mo; v[c] = defaut; variable = true; }
+                                    else v[c] = (Double) r;
+                                }
+                                Cle cle = new Cle(nombre(kf, "time", 0), v[0], v[1], v[2], texte(kf, "interpolation", "linear"), variable ? expr : null);
                                 switch (canal) {
                                     case "position" -> pos.add(cle);
                                     case "scale" -> ech.add(cle);
@@ -143,8 +158,9 @@ public final class LecteurBBModel {
                         os.put(an.getKey(), new Canaux(pos, rot, ech));
                     }
                 }
+                evenements.sort((x, y) -> Double.compare(x.temps(), y.temps()));
                 String boucle = texte(a, "loop", "once");
-                animations.put(nom, new Animation(nom, nombre(a, "length", 0), boucle, os));
+                animations.put(nom, new Animation(nom, nombre(a, "length", 0), boucle, os, List.copyOf(evenements)));
             }
         }
 
@@ -297,16 +313,47 @@ public final class LecteurBBModel {
 
     // ------------------------------------------------------------------ lecture JSON
 
-    private static double valeur(JsonObject pt, String cle, double defaut, List<String> problemes, String id, String anim) {
+    /** Clés de la piste « Effets » : sons, particules et scripts (timeline). */
+    private static void lireEffets(JsonObject o, List<ModeleBB.Evenement> evenements) {
+        JsonArray cles = tableau(o, "keyframes");
+        if (cles == null) return;
+        for (JsonElement k : cles) {
+            if (!k.isJsonObject()) continue;
+            JsonObject kf = k.getAsJsonObject();
+            String canal = texte(kf, "channel", "");
+            if (!canal.equals("sound") && !canal.equals("particle") && !canal.equals("timeline")) continue;
+            JsonArray pts = tableau(kf, "data_points");
+            if (pts == null) continue;
+            for (JsonElement e : pts) {
+                if (!e.isJsonObject()) continue;
+                JsonObject pt = e.getAsJsonObject();
+                String v = canal.equals("timeline") ? texte(pt, "script", "") : texte(pt, "effect", "");
+                if (v == null || v.isBlank()) continue;
+                evenements.add(new ModeleBB.Evenement(nombre(kf, "time", 0), canal, v.trim()));
+            }
+        }
+    }
+
+    /** Nombre (Double), ou expression Molang qui dépend du temps (Molang). */
+    private static Object valeur(JsonObject pt, String cle, double defaut, List<String> problemes, String id, String anim) {
         if (!pt.has(cle)) return defaut;
         JsonElement e = pt.get(cle);
+        String t;
         try {
             if (e.getAsJsonPrimitive().isNumber()) return e.getAsDouble();
-            String t = e.getAsString().trim();
-            if (t.isEmpty()) return defaut;
-            return Double.parseDouble(t.replace(',', '.'));
+            t = e.getAsString().trim();
         } catch (RuntimeException ex) {
-            String msg = id + " : animation « " + anim + " » : expression « " + e + " » non prise en charge (nombres seulement), 0 utilisé";
+            return defaut;
+        }
+        if (t.isEmpty() || t.equals("-") || t.equals("+")) return defaut; // Blockbench : champ laissé vide ou à moitié tapé = 0
+        try {
+            return Double.parseDouble(t.replace(',', '.'));
+        } catch (NumberFormatException ignore) { }
+        try {
+            Molang m = Molang.compiler(t);
+            return m.constant() ? (Object) m.evaluer(0) : m;
+        } catch (RuntimeException ex) {
+            String msg = id + " : animation « " + anim + " » : expression « " + t + " » non comprise (" + ex.getMessage() + "), 0 utilisé";
             if (!problemes.contains(msg)) problemes.add(msg);
             return defaut;
         }

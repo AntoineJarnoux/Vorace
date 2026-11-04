@@ -124,6 +124,47 @@ public final class VoraceAPI {
         return i != null && i.jouer(animation, boucle);
     }
 
+    /**
+     * Joue une animation par-dessus celle en cours : seuls les os qu'elle anime changent (attaquer en marchant).
+     * Faux si pas de modèle ou animation inconnue.
+     */
+    public static boolean jouerAnimationParDessus(Entity base, String animation, boolean boucle) {
+        if (plugin == null || plugin.modeles() == null) return false;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        return i != null && i.jouerParDessus(animation, boucle);
+    }
+
+    /** Agrandit le modèle de cette entité (1 = taille du .bbmodel, gardée avec le monde). Faux si pas de modèle. */
+    public static boolean tailleModele(Entity base, float taille) {
+        if (plugin == null || plugin.modeles() == null) return false;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        if (i == null) return false;
+        i.taille(taille);
+        return true;
+    }
+
+    /**
+     * Position actuelle d'un os du modèle (nom de Blockbench : « main_droite », « tag_nom », « mount »...),
+     * pour y accrocher un objet, un passager ou des particules. Null si pas de modèle ou os inconnu.
+     */
+    public static org.bukkit.Location positionOs(Entity base, String os) {
+        if (plugin == null || plugin.modeles() == null) return null;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        return i == null ? null : i.positionOs(os);
+    }
+
+    /**
+     * Oriente les os de tête (« h_... », « head », « tete ») : degrés par rapport au corps, pitch positif = vers le bas.
+     * Float.NaN rend la tête au regard du mob. Faux si pas de modèle.
+     */
+    public static boolean regardModele(Entity base, float yawRelatif, float pitch) {
+        if (plugin == null || plugin.modeles() == null) return false;
+        fr.vorace.modeles.Modeles.Instance i = plugin.modeles().instance(base);
+        if (i == null) return false;
+        i.regard(yawRelatif, pitch);
+        return true;
+    }
+
     /** Identifiant du modèle animé de cette entité, ou null. */
     public static String modeleAnime(Entity base) {
         if (plugin == null || plugin.modeles() == null) return null;

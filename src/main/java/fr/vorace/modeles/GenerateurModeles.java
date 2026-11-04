@@ -29,7 +29,11 @@ public final class GenerateurModeles {
         Map<String, byte[]> sortie = new TreeMap<>();
         for (int t = 0; t < m.textures().size(); t++) {
             ModeleBB.Texture tex = m.textures().get(t);
-            if (tex.png() != null) sortie.put("assets/" + GenerateurPack.NS + "/textures/item/anime/" + m.id() + "/" + t + ".png", tex.png());
+            if (tex.png() == null) continue;
+            String chemin = "assets/" + GenerateurPack.NS + "/textures/item/anime/" + m.id() + "/" + t + ".png";
+            sortie.put(chemin, tex.png());
+            JsonObject anim = animation(tex);
+            if (anim != null) sortie.put(chemin + ".mcmeta", anim.toString().getBytes(StandardCharsets.UTF_8));
         }
         for (int i = 0; i < m.parties().size(); i++) {
             Partie p = m.parties().get(i);
@@ -73,6 +77,7 @@ public final class GenerateurModeles {
                 o.add("uv", uv);
                 o.addProperty("texture", "#" + face.texture());
                 if (face.rotation() != 0) o.addProperty("rotation", face.rotation());
+                o.addProperty("tintindex", 0); // teinte rouge des dégâts (couleur du composant custom_model_data)
                 faces.add(f.getKey(), o);
             }
             e.add("faces", faces);
@@ -80,6 +85,39 @@ public final class GenerateurModeles {
         }
         j.add("elements", elements);
         return j;
+    }
+
+    /**
+     * Texture animée de Blockbench : les images sont empilées en hauteur, chacune a les proportions des UV
+     * (uv_width x uv_height). Renvoie le .mcmeta à écrire, ou null pour une image fixe.
+     */
+    static JsonObject animation(ModeleBB.Texture tex) {
+        int[] taille = taillePng(tex.png());
+        if (taille == null || tex.largeurUV() <= 0 || tex.hauteurUV() <= 0) return null;
+        int largeur = taille[0], hauteur = taille[1];
+        double hauteurImage = largeur * (double) tex.hauteurUV() / tex.largeurUV();
+        if (hauteurImage < 1) return null;
+        double n = hauteur / hauteurImage;
+        int images = (int) Math.round(n);
+        if (images < 2 || Math.abs(n - images) > 1e-6 || Math.abs(hauteurImage - Math.round(hauteurImage)) > 1e-6) return null;
+        JsonObject a = new JsonObject();
+        a.addProperty("frametime", Math.max(1, tex.imageTics()));
+        if (tex.interpolee()) a.addProperty("interpolate", true);
+        if ((int) Math.round(hauteurImage) != largeur) {
+            a.addProperty("width", largeur);
+            a.addProperty("height", (int) Math.round(hauteurImage));
+        }
+        JsonObject j = new JsonObject();
+        j.add("animation", a);
+        return j;
+    }
+
+    /** Largeur et hauteur d'une image PNG (en-tête IHDR), ou null. */
+    static int[] taillePng(byte[] png) {
+        if (png == null || png.length < 24 || (png[0] & 0xFF) != 0x89 || png[1] != 'P' || png[2] != 'N' || png[3] != 'G') return null;
+        int l = ((png[16] & 0xFF) << 24) | ((png[17] & 0xFF) << 16) | ((png[18] & 0xFF) << 8) | (png[19] & 0xFF);
+        int h = ((png[20] & 0xFF) << 24) | ((png[21] & 0xFF) << 16) | ((png[22] & 0xFF) << 8) | (png[23] & 0xFF);
+        return l > 0 && h > 0 ? new int[]{l, h} : null;
     }
 
     /** Coordonnée dans le modèle d'objet : centrée sur 8, réduite si la partie est trop grande. */

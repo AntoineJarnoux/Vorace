@@ -37,7 +37,7 @@ public final class EcouteurModeles implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void degats(EntityDamageEvent e) {
         Modeles.Instance i = modeles().instance(e.getEntity());
-        if (i != null && i.surMob()) i.jouerAuto("degat");
+        if (i != null && i.surMob()) i.blesser();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

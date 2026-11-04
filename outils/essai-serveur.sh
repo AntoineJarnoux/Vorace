@@ -68,6 +68,16 @@ sleep 2
 cmd "vorace modele stop"
 sleep 1
 cmd "vorace modele info"
+# améliorations : animation par-dessus, taille du modèle
+cmd "vorace modele anim marche boucle"
+sleep 0.5
+cmd "vorace modele anim salut dessus"
+sleep 0.3
+cmd "vorace modele info"
+cmd "vorace modele taille 1.5"
+sleep 1
+cmd "vorace modele info"
+cmd "vorace modele stop"
 # couche paquets : heure remplacée par midi, un message bloqué, un autre qui passe
 cmd "gamerule doDaylightCycle false"
 cmd "time set 18000"
@@ -115,6 +125,8 @@ ERREURS=$(grep -acE 'ERROR\]: \[Vorace\]|at fr\.vorace\.' journal.txt)
 echo "erreurs de Vorace dans la console : $ERREURS"
 if [ "$ERREURS" -gt 0 ]; then echo "ECHEC : erreurs de Vorace dans la console"; exit 1; fi
 if [ "$EMPREINTES" -lt 3 ] || [ "${DISTINCTES:-0}" -lt 50 ]; then echo "ECHEC : les modèles ne s'animent pas"; exit 1; fi
+grep -aq 'par-dessus' journal.txt || { echo "ECHEC : animation par-dessus"; exit 1; }
+grep -aq 'taille=1.50 vue=proche' journal.txt || { echo "ECHEC : taille du modèle ou portée d'affichage"; exit 1; }
 grep -aq 'ESSAI PAQUETS heures-modifiees=[1-9][0-9]* messages-bloques=[1-9][0-9]* paquets-recus=[1-9][0-9]* erreurs=0' journal.txt || { echo "ECHEC : couche paquets (côté serveur)"; exit 1; }
 grep -aq 'VORACE-LIBRE' bot.txt || { echo "ECHEC : le message libre n'est pas arrivé au joueur"; exit 1; }
 if grep -aq 'VORACE-BLOQUE' bot.txt; then echo "ECHEC : le message bloqué est arrivé au joueur"; exit 1; fi

@@ -172,11 +172,28 @@ intégrées et les animations, et fabrique le pack tout seul. Exemple créé au 
   agrandis à l'affichage pour dépasser la limite de taille des modèles d'objets.
 - Chaque os est une entité d'affichage (pas de mob caché ni d'armor stand) : animations fluides grâce à
   l'interpolation du jeu, réglable avec `modeles.intervalle-tics`.
-- `/vorace modele [liste|poser|anim <animation> [boucle]|stop|info|prive|public|sur|invoquer|retirer]`.
-- API : `VoraceAPI.poserModele`, `attacherModele`, `jouerAnimation`, `modeleAnime`, `retirerModele`.
+- **Performances** : les entités d'un modèle n'existent que si un joueur est à moins de `modeles.distance-affichage`
+  blocs (48 par défaut) ; au-delà, aucun calcul. Après la moitié de cette distance, les images sont envoyées deux
+  fois moins souvent. Une ville pleine de modèles ne coûte que ce que les joueurs voient.
+- **Fondus et couches** : passage en douceur d'une animation à l'autre (`modeles.fondu-secondes`, 0,2 s).
+  `degat`, `attaque` et `clic` se jouent par-dessus : le mob attaque en continuant de marcher (seuls les os animés
+  par l'attaque changent). `/vorace modele anim <animation> dessus` ou `VoraceAPI.jouerAnimationParDessus`.
+- **Tête** : les os `h_...` (convention de ModelEngine), `head` ou `tete` suivent le regard du mob
+  (`modeles.suivi-tete`) ; `VoraceAPI.regardModele` pour l'orienter soi-même.
+- **Textures animées** de Blockbench (images empilées, `frame_time`, interpolation) : le `.mcmeta` est écrit tout seul.
+- **Dégâts** : le modèle rougit un instant quand son mob est touché (1.21.4 et plus, `modeles.teinte-degats`).
+- **Clés d'effet** (piste « Effets » de Blockbench) : sons et particules joués au bon moment, scripts « timeline »
+  transmis aux plugins par `VoraceModeleEffetEvent` (par exemple infliger les dégâts au moment du coup).
+- **Os spéciaux** : `tag_...` affiche le nom du mob à cet endroit ; `VoraceAPI.positionOs(base, "main_droite")`
+  donne la position d'un os (accrocher un objet, un passager, des particules).
+- **Taille par modèle** : `/vorace modele taille 1.5` ou `VoraceAPI.tailleModele(base, 1.5f)`, gardée avec le monde.
+- **Molang** dans les clés : nombres, `+ - * /`, conditions, `math.sin`, `math.cos`, `math.clamp`, `math.lerp`...
+  et `query.anim_time` (une variable inconnue vaut 0).
+- `/vorace modele [liste|poser|anim <animation> [boucle] [dessus]|stop|taille <facteur>|info|prive|public|sur|invoquer|retirer]`.
+- API : `VoraceAPI.poserModele`, `attacherModele`, `jouerAnimation`, `jouerAnimationParDessus`, `tailleModele`,
+  `regardModele`, `positionOs`, `modeleAnime`, `retirerModele`.
 
-Pas encore pris en charge : expressions Molang dans les animations (seulement des nombres), maillages (meshes),
-teinte rouge des dégâts.
+Pas encore pris en charge : maillages (meshes), variables Molang propres au mob (`query.ground_speed`...).
 
 - `/vorace modele prive [joueur]` : seul ce joueur voit le modèle (`VoraceAPI.modeleVisiblePour(base, joueurs...)`),
   `/vorace modele public` pour annuler.
@@ -263,7 +280,7 @@ puis retire-le ou désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace meuble [liste\|poser\|info\|retirer\|rafraichir]` | gestion des meubles posés |
 | `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
 | `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
-| `/vorace modele [liste\|poser\|anim\|stop\|info\|prive\|public\|sur\|invoquer\|retirer]` | modèles animés |
+| `/vorace modele [liste\|poser\|anim\|stop\|taille\|info\|prive\|public\|sur\|invoquer\|retirer]` | modèles animés |
 | `/vorace paquets [stats\|journal\|ecoutes] [joueur]` | paquets du jeu (débogage) |
 | `/vorace convertir [nexo\|oraxen\|itemsadder\|modelengine\|tout]` | reprend le contenu de ces plugins |
 | `/emojis` | (tous les joueurs) liste des emojis du chat |
@@ -315,6 +332,7 @@ Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par 
 - `VoraceMeublePoseEvent`, `VoraceMeubleCasseEvent` : un meuble va être posé ou cassé (annulables).
 - `VoraceBlocPoseEvent`, `VoraceBlocCasseEvent` : un bloc Vorace va être posé ou cassé (annulables, butin modifiable).
 - `VoraceModeleAnimationEvent` : une animation va être jouée sur un modèle (annulable, animation modifiable).
+- `VoraceModeleEffetEvent` : une clé d'effet d'animation est atteinte (son, particule ou script ; annulable).
 
 ## Compiler
 

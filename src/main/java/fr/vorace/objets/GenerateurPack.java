@@ -76,7 +76,16 @@ public final class GenerateurPack {
                 JsonObject m = new JsonObject();
                 m.addProperty("type", "minecraft:model");
                 m.addProperty("model", NS + ":item/" + v.id());
-                if (v.teinte() != null) {
+                if (v.id().startsWith("anime/")) {
+                    // parties des modèles animés : teinte réglée par le serveur (rouge pendant les dégâts), blanche sinon
+                    JsonArray tints = new JsonArray();
+                    JsonObject t = new JsonObject();
+                    t.addProperty("type", "minecraft:custom_model_data");
+                    t.addProperty("index", 0);
+                    t.addProperty("default", -1);
+                    tints.add(t);
+                    m.add("tints", tints);
+                } else if (v.teinte() != null) {
                     JsonArray tints = new JsonArray();
                     JsonObject t = new JsonObject();
                     t.addProperty("type", "minecraft:dye");
