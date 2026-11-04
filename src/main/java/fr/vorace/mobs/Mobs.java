@@ -537,6 +537,8 @@ public final class Mobs {
         if (s.d.ia().equals("aucune")) return;
         if (proche == null) return; // personne autour : il ne réfléchit pas
         if (!(e instanceof Mob mob)) return;
+        // monté par un joueur ou tenu en laisse : c'est le joueur qui décide
+        if (!e.getPassengers().isEmpty() || (e instanceof LivingEntity le && le.isLeashed())) return;
         double distMaison = Geometrie.distance(l.getX(), l.getZ(), s.mx, s.mz);
 
         if (s.d.ia().equals("jeu")) {
