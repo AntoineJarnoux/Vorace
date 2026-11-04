@@ -49,6 +49,6 @@ bot.once('spawn', () => {
 });
 const heures = new Set();
 bot.on('time', () => heures.add(bot.time.timeOfDay));
-bot.on('message', (m) => console.log('BOT MESSAGE ' + m.toString()));
+bot.on('message', (m) => console.log('BOT MESSAGE ' + m.toString() + ' (' + new Date().toISOString().slice(11, 19) + ')'));
 bot.on('kicked', (r) => console.log('BOT EXPULSE ' + JSON.stringify(r)));
 bot.on('error', (e) => console.log('BOT ERREUR ' + e));

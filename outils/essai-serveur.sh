@@ -204,7 +204,9 @@ for _ in $(seq 1 60); do kill -0 $SERVEUR 2>/dev/null || break; sleep 1; done
 kill $SERVEUR 2>/dev/null
 
 echo "===== Faux joueur"; cat bot.txt
-echo "===== Console (Vorace)"; grep -aiE 'vorace|modèle|empreinte|animation|paquets|exception|error|at fr\.' journal.txt | grep -v 'Loading server plugin' | head -150
+echo "===== Console (Vorace)"; grep -aiE 'vorace|modèle|empreinte|animation|paquets|exception|error|at fr\.|game mode' journal.txt | grep -v 'Loading server plugin' | head -150
+echo "===== Commandes envoyées, dans l'ordre"; cat commandes.txt
+echo "===== Mobs du zoo (joueur en créatif)"; grep -a 'mob=zoo_' journal.txt
 echo "===== Fin du journal"; tail -30 journal.txt
 
 # verdict
