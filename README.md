@@ -236,8 +236,14 @@ mouton:
   sur un toit ou une branche ; ils s'envolent quand un joueur approche (`envol: 5`, deux fois moins loin s'il est
   accroupi) ou de temps en temps, volent de point en point en virant, puis se posent ailleurs, toujours dans leur laisse.
   Les papillons volettent bas en zigzag. Animation de vol : rôle `vol` (par exemple `animations: { vol: fly }`).
-- **Décors vivants** (`type: decor`) : un modèle posé sans entité (pigeons, papillons), qui peut s'envoler quand
-  un joueur approche (`envol: 4`, animation `envol`) puis réapparaître plus tard.
+  Avec `marche: 0.9` (blocs par seconde), un oiseau posé trottine au sol par petits pas sur du plat et s'arrête
+  pour picorer (`ennui: [peck]`) : pigeons de place, moineaux. Son animation `walk` se joue toute seule.
+- **Décors vivants** (`type: decor`) : un modèle posé sans entité (bain d'oiseaux, nid, mangeoire), qui joue son
+  `idle` en boucle et ses animations `ennui` de temps en temps. Avec `envol: 4` il joue `envol` quand un joueur
+  approche ; s'il a aussi une animation `retour`, il reste en place (les oiseaux sont partis) et la joue 15 s après
+  le départ du dernier joueur proche, sinon il disparaît et son point d'apparition le remplace plus tard.
+- **Joueurs en créatif** : ils comptent comme les autres pour faire vivre les mobs et les effrayer (oiseaux,
+  lapins...), mais ne sont jamais attaqués. Seuls les spectateurs et les joueurs invisibles sont ignorés.
 - **IA** : `ia: vorace` (le cerveau remplace l'IA de déplacement du jeu), `ia: jeu` (l'IA du jeu, gardée en laisse :
   poissons, abeilles, grenouilles) ou `ia: aucune`.
 - **Performances** : un mob loin de tout joueur (`mobs.distance-reflexion`, 64 blocs) ne réfléchit pas ; les autres

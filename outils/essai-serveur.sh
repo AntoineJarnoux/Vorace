@@ -71,6 +71,20 @@ chevre_essai:
   type: goat
   ia: jeu
   laisse: 8
+pigeon_essai:
+  type: bat
+  modele: golem_rubis
+  taille: [0.3, 0.3]
+  vol: oiseau
+  marche: 0.9
+  envol: 1
+  laisse: 10
+  silencieux: true
+lapin_createf:
+  type: rabbit
+  caractere: craintif
+  detection: 24
+  laisse: 10
 MOBS
 echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
@@ -94,7 +108,7 @@ attendre() { # attendre <motif> <fichier> <secondes>
 }
 if ! attendre 'Done (' journal.txt 400; then echo "Le serveur n'a pas démarré"; tail -80 journal.txt; exit 1; fi
 cmd "vorace modele"
-node "$OUTILS/essai-bot.mjs" 40 $CLIENT > bot.txt 2>&1 &
+node "$OUTILS/essai-bot.mjs" 48 $CLIENT > bot.txt 2>&1 &
 BOT=$!
 attendre 'BOT CONNECTE' bot.txt 60 || { echo "Le faux joueur ne s'est pas connecté"; cat bot.txt; }
 sleep 2
@@ -128,6 +142,14 @@ cmd "vorace mob invoquer lapin_essai"
 for m in oiseau_essai poule_essai chat_essai chevre_essai; do cmd "vorace mob invoquer $m"; done
 cmd "vorace mob invoquer cochon_essai 2"
 sleep 5
+cmd "vorace mob info"
+sleep 3
+cmd "vorace mob info"
+# joueur en créatif : les animaux vivent quand même autour de lui (marche du pigeon, fuite du lapin)
+cmd "gamemode creative Testeur"
+cmd "vorace mob invoquer pigeon_essai 2"
+cmd "vorace mob invoquer lapin_createf"
+sleep 4
 cmd "vorace mob info"
 sleep 3
 cmd "vorace mob info"
@@ -188,6 +210,10 @@ echo "$MOBS_VUS" | grep -q 'mob=oiseau_essai action=vole' || { echo "ECHEC : l'o
 echo "$MOBS_VUS" | grep -q 'mob=poule_essai action=fuir' || { echo "ECHEC : la poule ne fuit pas"; exit 1; }
 echo "$MOBS_VUS" | grep -q 'mob=chat_essai action=fuir' || { echo "ECHEC : le chat ne fuit pas"; exit 1; }
 for m in cochon_essai chevre_essai; do echo "$MOBS_VUS" | grep -q "mob=$m" || { echo "ECHEC : $m absent"; exit 1; }; done
+echo "$MOBS_VUS" | grep -q 'mob=lapin_createf action=fuir' || { echo "ECHEC : en créatif, le lapin ne fuit pas (les mobs ne pensent pas)"; exit 1; }
+PIED=$(grep -ao 'mob=pigeon_essai .*a-pied=[0-9.]*' journal.txt | grep -ao 'a-pied=[0-9.]*' | cut -d= -f2 | sort -g | tail -1)
+echo "pigeon : ${PIED:-0} blocs à pied"
+awk -v p="${PIED:-0}" 'BEGIN {exit !(p > 0.5)}' || { echo "ECHEC : en créatif, le pigeon ne marche pas"; exit 1; }
 if grep -ao 'maison=[0-9.]*/[0-9]*' journal.txt | awk -F'[=/]' '$2 > $3 + 2 {bad=1} END {exit !bad}'; then echo "ECHEC : un mob est sorti de sa laisse"; exit 1; fi
 grep -aq 'taille=1.50 vue=proche' journal.txt || { echo "ECHEC : taille du modèle ou portée d'affichage"; exit 1; }
 grep -aq 'ESSAI PAQUETS heures-modifiees=[1-9][0-9]* messages-bloques=[1-9][0-9]* paquets-recus=[1-9][0-9]* erreurs=0' journal.txt || { echo "ECHEC : couche paquets (côté serveur)"; exit 1; }

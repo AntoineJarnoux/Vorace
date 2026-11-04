@@ -5,7 +5,8 @@ import java.util.Random;
 /**
  * Vol d'un oiseau ou d'un papillon (sans Bukkit) : posé, s'envole quand on approche (ou de lui-même), vole de point
  * en point en virant doucement, puis se pose ailleurs, toujours dans sa laisse. Les papillons et les lucioles
- * volettent bas, en zigzag ; les oiseaux montent plus haut et vont plus vite.
+ * volettent bas, en zigzag ; les oiseaux montent plus haut et vont plus vite. Un oiseau « marcheur » (pigeon,
+ * moineau) trottine au sol quand il est posé : petits pas sur du plat, pauses pour picorer.
  */
 public final class Vol {
 
@@ -21,6 +22,11 @@ public final class Vol {
     private Etat etat = Etat.POSE;
     private double tx, ty, tz, temps, duree, phase;
     private double yaw;
+    /** Marche au sol (posé) : vitesse (0 = immobile), but, pause restante. */
+    private double vitesseMarche, px, pz, attente = 1;
+    private boolean marche;
+    /** Distance parcourue à pied depuis l'apparition (pour /vorace mob info et les essais). */
+    private double parcouru;
 
     /**
      * @param vitesse blocs par seconde en vol de croisière
@@ -45,6 +51,17 @@ public final class Vol {
     /** Orientation (degrés Minecraft) dans le sens du vol. */
     public float yaw() { return (float) yaw; }
     public boolean enVol() { return etat != Etat.POSE; }
+    /** Posé et en train de marcher. */
+    public boolean marche() { return marche; }
+    public double parcouru() { return parcouru; }
+
+    /** Fait trottiner l'oiseau au sol quand il est posé (blocs par seconde) ; il reste alors posé plus longtemps. */
+    public Vol marcheur(double vitesse) {
+        vitesseMarche = Math.max(0, vitesse);
+        if (vitesseMarche > 0 && etat == Etat.POSE) duree = Math.max(duree, 20 + hasard.nextDouble() * 40);
+        attente = 0.5 + hasard.nextDouble() * 2;
+        return this;
+    }
 
     /** Un joueur approche : s'envoler à l'opposé. */
     public void effrayer(double menX, double menZ, Sol sol, double mx, double mz, double laisse) {
@@ -56,11 +73,12 @@ public final class Vol {
         decoller(p[0], p[1], sol, true);
     }
 
-    private void decoller(double px, double pz, Sol sol, boolean vite) {
-        double h = sol.hauteur(px, pz);
+    private void decoller(double cx, double cz, Sol sol, boolean vite) {
+        double h = sol.hauteur(cx, cz);
         if (Double.isNaN(h)) h = y;
         etat = Etat.VOL;
-        tx = px; tz = pz;
+        marche = false;
+        tx = cx; tz = cz;
         ty = h + altMin + hasard.nextDouble() * (altMax - altMin);
         temps = 0;
         duree = papillon ? 6 + hasard.nextDouble() * 10 : (vite ? 8 : 6) + hasard.nextDouble() * 14;
@@ -91,7 +109,9 @@ public final class Vol {
                 if (temps >= duree) {
                     double[] p = pointAuHasard(mx, mz, laisse);
                     decoller(p[0], p[1], sol, false);
+                    return;
                 }
+                if (vitesseMarche > 0) marcher(dt, sol, mx, mz, laisse);
                 return;
             }
             case VOL -> {
@@ -119,7 +139,8 @@ public final class Vol {
                     vx = vy = vz = 0;
                     etat = Etat.POSE;
                     temps = 0;
-                    duree = papillon ? 2 + hasard.nextDouble() * 6 : 8 + hasard.nextDouble() * 30;
+                    duree = papillon ? 2 + hasard.nextDouble() * 6 : vitesseMarche > 0 ? 20 + hasard.nextDouble() * 40 : 8 + hasard.nextDouble() * 30;
+                    attente = 1 + hasard.nextDouble() * 2;
                     return;
                 }
             }
@@ -146,11 +167,42 @@ public final class Vol {
         if (Math.hypot(vx, vz) > 0.05) yaw = Math.toDegrees(Math.atan2(-vx, vz));
     }
 
+    /** Petits pas au sol : un but à 1-4 blocs sur du plat, on y va, on picore, on repart. */
+    private void marcher(double dt, Sol sol, double mx, double mz, double laisse) {
+        if (!marche) {
+            attente -= dt;
+            if (attente > 0) return;
+            for (int essai = 0; essai < 6 && !marche; essai++) {
+                double a = hasard.nextDouble() * Math.PI * 2, d = 1 + hasard.nextDouble() * 3;
+                double[] p = dansLaisse(x + Math.cos(a) * d, z + Math.sin(a) * d, mx, mz, laisse);
+                if (!plat(sol, p[0], p[1]) || !plat(sol, (x + p[0]) / 2, (z + p[1]) / 2)) continue;
+                px = p[0]; pz = p[1]; marche = true;
+            }
+            if (!marche) attente = 1 + hasard.nextDouble() * 2;
+            return;
+        }
+        double dx = px - x, dz = pz - z, n = Math.hypot(dx, dz);
+        if (n < 0.08) { marche = false; attente = 0.6 + hasard.nextDouble() * 2.2; return; }
+        double pas = Math.min(n, vitesseMarche * dt);
+        double nx = x + dx / n * pas, nz = z + dz / n * pas;
+        if (!plat(sol, nx, nz)) { marche = false; attente = 0.8; return; }
+        x = nx; z = nz; y = sol.hauteur(nx, nz);
+        parcouru += pas;
+        yaw = Math.toDegrees(Math.atan2(-dx, dz));
+    }
+
+    /** Sol connu à la même hauteur (pas de marche à monter ni de vide). */
+    private boolean plat(Sol sol, double qx, double qz) {
+        double h = sol.hauteur(qx, qz);
+        return !Double.isNaN(h) && Math.abs(h - y) <= 0.55;
+    }
+
     /** Place l'oiseau (rechargement, apparition). */
     public void placer(double nx, double ny, double nz) {
         x = nx; y = ny; z = nz;
         vx = vy = vz = 0;
         etat = Etat.POSE;
+        marche = false;
         temps = 0;
     }
 }

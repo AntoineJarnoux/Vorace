@@ -199,12 +199,12 @@ public final class Mobs {
 
         public String etat() {
             Location l = e.getLocation();
-            String act = vol != null ? (vol.etat() == Vol.Etat.POSE ? "pose" : vol.etat() == Vol.Etat.VOL ? "vole" : "atterrit")
+            String act = vol != null ? (vol.etat() == Vol.Etat.POSE ? (vol.marche() ? "marche" : "pose") : vol.etat() == Vol.Etat.VOL ? "vole" : "atterrit")
                 : c.action().name().toLowerCase(Locale.ROOT);
             return String.format(Locale.ROOT, "mob=%s action=%s faim=%.2f soif=%.2f fatigue=%.2f peur=%.2f colere=%.2f maison=%.1f/%.0f%s%s",
                 d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
                 Geometrie.distance(l.getX(), l.getZ(), mx, mz), laisse, troupeau == null ? "" : " troupeau=" + troupeau,
-                apparition == null ? "" : " apparition=" + apparition);
+                apparition == null ? "" : " apparition=" + apparition) + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "");
         }
     }
 
@@ -265,6 +265,7 @@ public final class Mobs {
                 double vit = (d.vol().equals("papillon") ? 1.6 : 6.5) * d.vitesse();
                 s.vol = new Vol(e.getUniqueId().getMostSignificantBits(), d.vol().equals("papillon"), vit, d.altMin(), d.altMax(),
                     l.getX(), l.getY(), l.getZ());
+                if (d.marche() > 0) s.vol.marcheur(d.marche());
             }
             suivis.put(e.getUniqueId(), s);
             if (s.apparition != null) {
@@ -520,13 +521,16 @@ public final class Mobs {
         }
     }
 
-    /** Joueur le plus proche qui compte (ni spectateur, ni créatif), et sa distance au carré dans d[0]. */
+    /**
+     * Joueur le plus proche (ni spectateur, ni invisible, ni mort), et sa distance au carré dans d[0]. Un joueur en
+     * créatif compte : les animaux vivent et le fuient autour de lui, mais ne l'attaquent pas (voir penser()).
+     */
     private static Player joueurProche(Entity e, double rayon, double[] d) {
         Player meilleur = null;
         double best = rayon * rayon;
         Location l = e.getLocation();
         for (Player p : e.getWorld().getPlayers()) {
-            if (p.getGameMode() == GameMode.SPECTATOR || p.getGameMode() == GameMode.CREATIVE || p.isInvisible() || p.isDead()) continue;
+            if (p.getGameMode() == GameMode.SPECTATOR || p.isInvisible() || p.isDead()) continue;
             double x = p.getLocation().distanceSquared(l);
             if (x < best) { best = x; meilleur = p; }
         }
@@ -551,25 +555,22 @@ public final class Mobs {
             if (modele != null) {
                 String an = s.d.animation("vol");
                 if (s.vol.enVol() && an != null && !an.equals(s.boucle)) { modele.jouer(an, true); s.boucle = an; }
-                else if (!s.vol.enVol() && s.boucle != null) { modele.arreterAnimation(); s.boucle = null; }
-                else if (!s.vol.enVol() && !s.d.ennui().isEmpty() && tic >= s.prochainEnnui) {
-                    s.prochainEnnui = tic + 100 + hasard.nextInt(200);
+                else if (!s.vol.enVol() && s.boucle != null) {
+                    // posé : animation d'atterrissage puis repos / marche automatiques
+                    String pose = s.d.animation("pose");
+                    if (pose != null) modele.jouer(pose, false); else modele.arreterAnimation();
+                    s.boucle = null;
+                    s.prochainEnnui = tic + 40 + hasard.nextInt(60);
+                }
+                else if (!s.vol.enVol() && !s.vol.marche() && !s.d.ennui().isEmpty() && tic >= s.prochainEnnui) {
+                    s.prochainEnnui = tic + 40 + hasard.nextInt(100);
                     modele.jouer(s.d.ennui().get(hasard.nextInt(s.d.ennui().size())), false);
                 }
             }
             return;
         }
         if (s.d.decor()) {
-            if (s.d.envol() <= 0) return;
-            if (s.envolFin < 0 && proche != null && dd[0] < s.d.envol() * s.d.envol()) {
-                String an = s.d.animation("envol");
-                if (modele != null && an != null) modele.jouer(an, false);
-                s.envolFin = tic + 30;
-            } else if (s.envolFin >= 0 && tic >= s.envolFin) {
-                mort(e);
-                if (modele != null && plugin.modeles() != null) plugin.modeles().retirer(modele);
-                else e.remove();
-            }
+            penserDecor(s, modele, proche, dd[0]);
             return;
         }
         if (s.d.ia().equals("aucune")) return;
@@ -607,6 +608,11 @@ public final class Mobs {
             && s.menace.getLocation().distanceSquared(l) < 32 * 32 ? s.menace : proche;
         double distMenace = Math.sqrt(menace.getLocation().distanceSquared(l));
         if (distMenace > Math.max(16, s.d.detection() * 2)) { menace = null; distMenace = Double.NaN; }
+        // un joueur en créatif n'est jamais pris pour cible (comme dans le jeu) ; les craintifs le fuient quand même
+        if (menace != null && menace.getGameMode() == GameMode.CREATIVE
+            && (s.d.caractere() == Cerveau.Caractere.TERRITORIAL || s.d.caractere() == Cerveau.Caractere.AGRESSIF)) {
+            menace = null; distMenace = Double.NaN;
+        }
         boolean rapide = menace != null && (menace.isSprinting()
             || (!Double.isNaN(s.distMenacePrec) && (s.distMenacePrec - distMenace) / dt > 3.5));
         boolean discrete = menace != null && menace.isSneaking();
@@ -651,6 +657,45 @@ public final class Mobs {
         agir(s, mob, modele, action, menace, centre, l);
     }
 
+    /**
+     * Décor vivant (modèle posé) : animations d'ennui de temps en temps ; s'il a une animation « envol », il la joue
+     * quand un joueur approche. Avec une animation « retour », le décor reste (les oiseaux sont partis) et la joue
+     * quand plus personne n'est près depuis un moment ; sans elle, il disparaît et son point le remplacera.
+     */
+    private void penserDecor(Suivi s, Modeles.Instance modele, Player proche, double d2) {
+        double env = s.d.envol();
+        String retour = s.d.animation("retour");
+        boolean pres = proche != null && env > 0 && d2 < env * env * (proche.isSneaking() ? 0.25 : 1);
+        if (s.envolFin < 0) {
+            if (pres) {
+                String an = s.d.animation("envol");
+                if (modele != null && an != null) modele.jouer(an, false);
+                s.envolFin = tic + (retour != null ? 300 : 30);
+                return;
+            }
+            if (modele != null && !s.d.ennui().isEmpty() && proche != null && tic >= s.prochainEnnui) {
+                if (s.prochainEnnui > 0) modele.jouer(s.d.ennui().get(hasard.nextInt(s.d.ennui().size())), false);
+                s.prochainEnnui = tic + 160 + hasard.nextInt(240);
+            }
+            return;
+        }
+        if (retour == null) {
+            if (tic >= s.envolFin) {
+                mort(s.e);
+                if (modele != null && plugin.modeles() != null) plugin.modeles().retirer(modele);
+                else s.e.remove();
+            }
+            return;
+        }
+        // partis : ils reviennent 15 s après le départ du dernier joueur proche
+        if (proche != null && d2 < env * env * 4) s.envolFin = Math.max(s.envolFin, tic + 300);
+        if (tic >= s.envolFin) {
+            if (modele != null) modele.jouer(retour, false);
+            s.envolFin = -1;
+            s.prochainEnnui = tic + 200 + hasard.nextInt(200);
+        }
+    }
+
     /** Hauteur du sol pour les volants : dessus du bloc le plus haut (toit, branche), pas sur l'eau. */
     static Vol.Sol sol(World w) {
         return (x, z) -> {
@@ -692,11 +737,14 @@ public final class Mobs {
                 if (menace != null && s.d.caractere() == Cerveau.Caractere.PAISIBLE && menace.getLocation().distanceSquared(l) < 36) mob.lookAt(menace);
             }
             case ERRER -> {
-                if (s.cible == null) {
+                // il flâne : un but, une courte pause en arrivant (ou s'il est bloqué), puis un autre but
+                boolean libre = s.cible == null || s.cible.distanceSquared(l) < 2.25 || !mob.getPathfinder().hasPath();
+                if (libre && tic >= s.prochainPlan) {
                     double[] p = Geometrie.errance(l.getX(), l.getZ(), s.mx, s.mz, s.laisse, hasard,
                         (x, z) -> (s.zone == null || s.zone.contient(x, z)) && sol(w, x, l.getY(), z, false) != null);
                     s.cible = sol(w, p[0], l.getY(), p[1], false);
                     if (s.cible != null) mob.getPathfinder().moveTo(s.cible, v);
+                    s.prochainPlan = tic + 30 + hasard.nextInt(60);
                 }
             }
             case MANGER -> allerPuisBoucle(s, mob, modele, s.nourriture, s.d.animation("manger"), v);

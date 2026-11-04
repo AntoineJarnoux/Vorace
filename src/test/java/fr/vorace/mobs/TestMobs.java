@@ -248,6 +248,22 @@ public final class TestMobs {
         DefinitionMob pg = DefinitionMob.lire("p", yv.getConfigurationSection("p"), pb);
         verifier(pb.isEmpty() && pg.volant() && !pg.cerveau() && pg.altMin() == 3 && pg.altMax() == 8 && "fly".equals(pg.animation("vol")), "pigeon volant lu");
 
+        // pigeon qui trottine au sol : petits pas sur le plat, jamais sur le toit voisin, toujours au sol
+        YamlConfiguration ym = YamlConfiguration.loadConfiguration(new java.io.StringReader("p: { type: bat, vol: oiseau, marche: 0.9 }"));
+        verifier(DefinitionMob.lire("p", ym.getConfigurationSection("p"), pb).marche() == 0.9, "vitesse de marche lue");
+        Vol pigeon = new Vol(3, false, 6.5, 3, 9, 8, 64, 0).marcheur(0.9);
+        double chemin = 0, px0 = pigeon.x(), pz0 = pigeon.z();
+        boolean toujoursAuSol = true, aMarche = false, aPicore = false;
+        for (int i = 0; i < 20 * 20; i++) {
+            pigeon.pas(0.05, plat, 8, 0, 20);
+            if (pigeon.enVol()) break;
+            chemin += Math.hypot(pigeon.x() - px0, pigeon.z() - pz0);
+            px0 = pigeon.x(); pz0 = pigeon.z();
+            if (Math.abs(pigeon.y() - plat.hauteur(pigeon.x(), pigeon.z())) > 1e-6 || pigeon.y() != 64) toujoursAuSol = false;
+            if (pigeon.marche()) aMarche = true; else if (aMarche) aPicore = true;
+        }
+        verifier(toujoursAuSol && aMarche && aPicore && chemin > 3, "pigeon : marche au sol puis s'arrête (" + String.format("%.1f", chemin) + " blocs en 20 s)");
+
         System.out.println(echecs == 0 ? "TOUS LES TESTS PASSENT" : echecs + " ECHEC(S)");
         System.exit(echecs == 0 ? 0 : 1);
     }
