@@ -51,6 +51,7 @@ public final class Vorace extends JavaPlugin {
     private Blocs blocs;
     private Glyphes glyphes;
     private Modeles modeles;
+    private fr.vorace.mobs.Mobs mobs;
     private fr.vorace.interfaces.Menus menus;
     private fr.vorace.paquets.Paquets paquets;
     private volatile String testHebergement;
@@ -65,6 +66,7 @@ public final class Vorace extends JavaPlugin {
     public Blocs blocs() { return blocs; }
     public Glyphes glyphes() { return glyphes; }
     public Modeles modeles() { return modeles; }
+    public fr.vorace.mobs.Mobs mobs() { return mobs; }
     public fr.vorace.interfaces.Menus menus() { return menus; }
     /** Couche paquets, ou null si désactivée (config « paquets.actif »). */
     public fr.vorace.paquets.Paquets paquets() { return paquets; }
@@ -97,6 +99,15 @@ public final class Vorace extends JavaPlugin {
         } catch (Throwable t) {
             modeles = null;
             getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les modèles animés", t);
+        }
+        if (getConfig().getBoolean("mobs.actif", true)) {
+            try {
+                mobs = new fr.vorace.mobs.Mobs(this);
+                mobs.charger();
+            } catch (Throwable t) {
+                mobs = null;
+                getLogger().log(java.util.logging.Level.SEVERE, "Impossible de charger les mobs", t);
+            }
         }
         VoraceAPI.initialiser(this);
         demarrerHebergement();
@@ -132,6 +143,14 @@ public final class Vorace extends JavaPlugin {
                 modeles.demarrer();
             } catch (Throwable t) {
                 getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les modèles animés", t);
+            }
+        }
+        if (mobs != null) {
+            try {
+                Bukkit.getPluginManager().registerEvents(new fr.vorace.mobs.EcouteurMobs(this), this);
+                mobs.demarrer();
+            } catch (Throwable t) {
+                getLogger().log(java.util.logging.Level.SEVERE, "Impossible d'activer les mobs", t);
             }
         }
         if (getConfig().getBoolean("paquets.actif", true)) {
@@ -189,6 +208,9 @@ public final class Vorace extends JavaPlugin {
         if (paquets != null) {
             try { paquets.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt de la couche paquets : " + t); }
         }
+        if (mobs != null) {
+            try { mobs.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des mobs : " + t); }
+        }
         if (modeles != null) {
             try { modeles.arreter(); } catch (Throwable t) { getLogger().warning("Arrêt des modèles animés : " + t); }
         }
@@ -210,6 +232,7 @@ public final class Vorace extends JavaPlugin {
         objets.charger(true);
         glyphes.charger();
         if (modeles != null) modeles.charger();
+        if (mobs != null) mobs.charger();
         rafraichirMeubles();
         if (!ancien.mode().equals(reglages.mode()) || ancien.portDedie() != reglages.portDedie()
             || !ancien.adressePublique().equals(reglages.adressePublique()) || ancien.portPublic() != reglages.portPublic()

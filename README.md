@@ -1,8 +1,8 @@
 # Vorace
 
 Plugin **libre et gratuit** pour serveurs Paper (Minecraft **1.21 à 26.x**) : packs de ressources,
-objets, meubles, blocs et glyphes personnalisés, modèles 3D animés, couche paquets et conversion depuis
-Nexo, Oraxen, ItemsAdder et ModelEngine. Tout se règle avec des menus (`/vorace`). Le but est de pouvoir
+objets, meubles, blocs et glyphes personnalisés, modèles 3D animés, mobs avec un vrai cerveau (troupeaux,
+besoins, horaires, laisse, points d'apparition), couche paquets et conversion depuis Nexo, Oraxen, ItemsAdder et ModelEngine. Tout se règle avec des menus (`/vorace`). Le but est de pouvoir
 tout faire sans plugin payant, et de corriger ou améliorer le plugin au fur et à mesure des besoins.
 
 > **Code écrit par une IA.** Vorace est développé par Claude (l'IA d'Anthropic), à la demande et sous la direction de ORA, qui teste et décide de ce qui est ajouté. Le code est ouvert pour que chacun puisse le relire, le corriger et l'améliorer.
@@ -198,6 +198,50 @@ Pas encore pris en charge : maillages (meshes), variables Molang propres au mob 
 - `/vorace modele prive [joueur]` : seul ce joueur voit le modèle (`VoraceAPI.modeleVisiblePour(base, joueurs...)`),
   `/vorace modele public` pour annuler.
 
+### Mobs (1.1, rôle de MythicMobs)
+
+Des mobs qui vivent : chacun a des **besoins** (faim, soif, fatigue) qui montent avec le temps, des **émotions**
+(peur, colère) et choisit tout seul quoi faire : se reposer, errer, manger, boire, dormir, rejoindre son troupeau,
+rentrer chez lui, fuir ou attaquer. Chaque action reçoit une note selon la situation et la meilleure l'emporte
+(une action commencée est menée à son terme, la peur passe avant la faim, la nuit on dort...).
+
+```yaml
+# plugins/Vorace/mobs/ferme.yml
+mouton:
+  type: sheep                    # entité du jeu qui porte le mob (hitbox, sons, butin)
+  modele: [ferme/mouton, ferme/mouton_noir]   # modèles animés, un au hasard (rien = apparence du jeu)
+  taille: [0.9, 1.1]
+  caractere: paisible            # paisible, craintif, territorial ou agressif
+  activite: diurne               # diurne, nocturne ou toujours
+  troupeau: { cohesion: 6 }      # reste à moins de 6 blocs du centre de son troupeau
+  laisse: 24                     # jamais à plus de 24 blocs de sa maison
+  zone: paturage                 # et jamais hors de cette zone (zones/*.yml)
+  nourriture: [grass_block, short_grass]      # blocs ou plantes qu'il va brouter ; « zone » = points de la zone
+  animations: { manger: graze, dormir: sleep, alerte: bleat, ennui: [groom, stretch] }
+```
+
+- **Caractères** : un mob *paisible* ne fuit que si on le frappe ou qu'on lui fonce dessus ; un *craintif* fuit
+  les joueurs qui approchent (deux fois moins loin s'ils sont accroupis) ; un *territorial* prévient, puis attaque
+  si on reste trop près ou si on le frappe ; un *agressif* attaque dès qu'il remarque un joueur.
+- **Troupeaux** : les membres restent groupés, et quand l'un prend peur tout le troupeau s'enfuit.
+- **Maison et laisse** : un mob ne s'éloigne jamais de sa maison au-delà de sa laisse, même en fuyant (il part
+  alors de biais). Avec une **zone** (rectangle, cercle ou polygone dans `zones/*.yml`), il n'en sort pas non plus.
+- **Points d'intérêt** des zones : `nourriture` (mangeoire), `eau` (abreuvoir), `abri` (où dormir la nuit).
+  Sinon le mob cherche lui-même l'herbe à brouter et une rive où boire autour de lui.
+- **Animations** : les rôles `manger`, `boire`, `dormir` sont joués en boucle sur place, `alerte` par-dessus quand
+  il prend peur ou se fâche, `ennui` de temps en temps au repos. Marche, course, dégâts et mort restent automatiques.
+- **Points d'apparition** (`apparitions/*.yml`) : une population gardée autour d'un endroit, qui devient la maison
+  de ces mobs ; un mob mort est remplacé après un délai. Rien n'apparaît sans joueur à moins de 96 blocs.
+- **Décors vivants** (`type: decor`) : un modèle posé sans entité (pigeons, papillons), qui peut s'envoler quand
+  un joueur approche (`envol: 4`, animation `envol`) puis réapparaître plus tard.
+- **IA** : `ia: vorace` (le cerveau remplace l'IA de déplacement du jeu), `ia: jeu` (l'IA du jeu, gardée en laisse :
+  poissons, abeilles, grenouilles) ou `ia: aucune`.
+- **Performances** : un mob loin de tout joueur (`mobs.distance-reflexion`, 64 blocs) ne réfléchit pas ; les autres
+  réfléchissent deux fois par seconde, chacun à son tour. Les besoins sont gardés avec l'entité.
+- `/vorace mob [liste|invoquer <mob> [nombre]|info|apparitions|retirer|recharger]`.
+- API : `VoraceAPI.invoquerMob`, `mobVorace`, `actionMob`, `effrayerMob` ; événement `VoraceMobActionEvent`
+  à chaque changement d'action.
+
 ### Couche paquets (0.7, rôle de ProtocolLib)
 
 Vorace se glisse dans la connexion de chaque joueur : un plugin peut lire, modifier, annuler ou envoyer n'importe
@@ -281,6 +325,7 @@ puis retire-le ou désactive son envoi, sinon les joueurs recevront deux packs.
 | `/vorace bloc [liste\|poser\|casser\|info]` | blocs personnalisés |
 | `/vorace glyphe [liste\|menu <fond>]` | glyphes et aperçu des fonds de menus |
 | `/vorace modele [liste\|poser\|anim\|stop\|taille\|info\|prive\|public\|sur\|invoquer\|retirer]` | modèles animés |
+| `/vorace mob [liste\|invoquer\|info\|apparitions\|retirer\|recharger]` | mobs avec cerveau, troupeaux, apparitions |
 | `/vorace paquets [stats\|journal\|ecoutes] [joueur]` | paquets du jeu (débogage) |
 | `/vorace convertir [nexo\|oraxen\|itemsadder\|modelengine\|tout]` | reprend le contenu de ces plugins |
 | `/emojis` | (tous les joueurs) liste des emojis du chat |
@@ -333,6 +378,7 @@ Puis `depend: [Vorace]` (ou `softdepend`) dans votre plugin.yml. Tout passe par 
 - `VoraceBlocPoseEvent`, `VoraceBlocCasseEvent` : un bloc Vorace va être posé ou cassé (annulables, butin modifiable).
 - `VoraceModeleAnimationEvent` : une animation va être jouée sur un modèle (annulable, animation modifiable).
 - `VoraceModeleEffetEvent` : une clé d'effet d'animation est atteinte (son, particule ou script ; annulable).
+- `VoraceMobActionEvent` : un mob de Vorace change d'action (repos, errer, manger, fuir, attaquer...).
 
 ## Compiler
 
@@ -358,6 +404,9 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 7. ✅ Couche paquets (rôle de ProtocolLib), modèles visibles par un seul joueur, API commune et dépendance Maven
 8. ✅ Conversion automatique des configurations Nexo, Oraxen, ItemsAdder et ModelEngine
 9. ✅ **1.0** : tout se fait avec des menus (`/vorace`), aux couleurs de Vorace
+10. ✅ **1.1** : modèles animés plus fluides et moins coûteux (portée d'affichage, fondus, couches, tête qui suit le
+    regard, textures animées, teinte des dégâts, clés d'effet, Molang) et mobs avec un cerveau (besoins, troupeaux,
+    laisse, zones, horaires, points d'apparition)
 
 ## Licence
 

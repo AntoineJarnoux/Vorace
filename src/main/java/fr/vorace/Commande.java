@@ -100,6 +100,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "bloc", "blocs" -> bloc(s, a);
             case "glyphe", "glyphes" -> glyphe(s, a);
             case "modele", "modeles", "modèle" -> modele(s, a);
+            case "mob", "mobs" -> mob(s, a);
             case "paquets", "paquet" -> paquets(s, a);
             case "convertir", "convert", "conversion" -> convertir(s, a);
             case "emojis", "emoji" -> emojis(s);
@@ -118,6 +119,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                 s.sendMessage(Messages.brut("<white>/vorace bloc [liste|poser|casser|info]</white> <gray>blocs personnalisés"));
                 s.sendMessage(Messages.brut("<white>/vorace glyphe [liste|menu <fond>]</white> <gray>glyphes et fonds de menus"));
                 s.sendMessage(Messages.brut("<white>/vorace modele [liste|poser|anim|stop|taille|info|prive|public|sur|invoquer|retirer]</white> <gray>modèles animés"));
+                s.sendMessage(Messages.brut("<white>/vorace mob [liste|invoquer|info|apparitions|retirer|recharger]</white> <gray>mobs avec cerveau, troupeaux et apparitions"));
                 s.sendMessage(Messages.brut("<white>/vorace paquets [stats|journal|ecoutes] [joueur]</white> <gray>paquets du jeu"));
                 s.sendMessage(Messages.brut("<white>/vorace convertir [nexo|oraxen|itemsadder|modelengine|tout]</white> <gray>reprend le contenu de ces plugins"));
                 s.sendMessage(Messages.brut("<white>/emojis</white> <gray>(joueurs) liste des emojis du chat"));
@@ -469,6 +471,64 @@ public final class Commande implements CommandExecutor, TabCompleter {
         }
     }
 
+    /** /vorace mob [liste|invoquer <mob> [nombre]|info|apparitions|retirer [rayon]|recharger] */
+    private void mob(CommandSender s, String[] a) {
+        fr.vorace.mobs.Mobs m = plugin.mobs();
+        if (m == null) { s.sendMessage(Messages.brut("<red>Les mobs sont désactivés (config : mobs.actif) ou n'ont pas pu démarrer.")); return; }
+        String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
+        Player p = s instanceof Player j ? j : null;
+        org.bukkit.Location ici = p != null ? p.getLocation() : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
+        switch (act) {
+            case "invoquer" -> {
+                if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace mob invoquer <mob> [nombre]")); return; }
+                fr.vorace.mobs.DefinitionMob d = m.definition(a[2]);
+                if (d == null) { s.sendMessage(Messages.brut("<red>Mob inconnu : " + Messages.echapper(a[2]))); return; }
+                int n = 1;
+                try { if (a.length > 3) n = Math.max(1, Math.min(32, Integer.parseInt(a[3]))); } catch (NumberFormatException ignore) { }
+                org.bukkit.Location ou = p != null ? p.getLocation() : new org.bukkit.Location(ici.getWorld(), ici.getBlockX() + 0.5, ici.getBlockY(), ici.getBlockZ() - 8.5);
+                String troupeau = n > 1 && d.cohesion() > 0 ? "invoques-" + Long.toString(System.nanoTime(), 36) : null;
+                int faits = 0;
+                for (int k = 0; k < n; k++) if (m.invoquer(d.id(), ou.clone().add((k % 3) - 1, 0, (k / 3) - 1), null, troupeau) != null) faits++;
+                s.sendMessage(Messages.brut("<green>" + faits + " " + Messages.echapper(d.id()) + " invoqué(s)" + (troupeau != null ? " en troupeau." : ".")));
+            }
+            case "info" -> {
+                s.sendMessage(Messages.brut("<gray>" + m.suivis().size() + " mob(s) de Vorace chargé(s)"
+                    + (m.derniereErreur() == null ? "" : ", dernière erreur : <red>" + Messages.echapper(m.derniereErreur()))));
+                List<fr.vorace.mobs.Mobs.Suivi> proches = m.proches(ici, 32, 8);
+                if (proches.isEmpty()) { s.sendMessage(Messages.brut("<yellow>Aucun mob de Vorace à moins de 32 blocs.")); return; }
+                for (fr.vorace.mobs.Mobs.Suivi x : proches) s.sendMessage(Messages.brut("<white>" + Messages.echapper(x.etat())));
+            }
+            case "apparitions" -> {
+                for (fr.vorace.mobs.Apparition ap : m.apparitions()) s.sendMessage(Messages.brut("<white> " + Messages.echapper(ap.id()) + " <gray>: "
+                    + m.membres(ap.id()) + "/" + ap.nombre() + " " + Messages.echapper(String.join(", ", ap.mobs())) + " à "
+                    + (int) ap.x() + " " + (int) ap.y() + " " + (int) ap.z() + " (" + Messages.echapper(ap.monde()) + ")"));
+                s.sendMessage(Messages.brut("<gray>" + m.apparitions().size() + " point(s) d'apparition."));
+            }
+            case "retirer" -> {
+                double rayon = 8;
+                try { if (a.length > 2) rayon = Double.parseDouble(a[2]); } catch (NumberFormatException ignore) { }
+                fr.vorace.mobs.Mobs.Suivi x = m.plusProche(ici, rayon);
+                if (x == null) { s.sendMessage(Messages.brut("<yellow>Aucun mob de Vorace à moins de " + (int) rayon + " blocs.")); return; }
+                org.bukkit.entity.Entity e = x.entite();
+                m.mort(e);
+                if (plugin.modeles() != null && plugin.modeles().instance(e) != null) plugin.modeles().retirer(plugin.modeles().instance(e));
+                if (e.isValid()) e.remove();
+                s.sendMessage(Messages.brut("<green>Mob retiré."));
+            }
+            case "recharger" -> {
+                m.charger();
+                s.sendMessage(Messages.brut("<green>Mobs, zones et apparitions relus."));
+            }
+            default -> {
+                s.sendMessage(Messages.brut("<gray>" + m.definitions().size() + " mob(s), " + m.zones().size() + " zone(s), " + m.apparitions().size()
+                    + " point(s) d'apparition, " + m.suivis().size() + " mob(s) chargé(s) :"));
+                for (fr.vorace.mobs.DefinitionMob d : m.definitions()) s.sendMessage(Messages.brut("<white> " + Messages.echapper(d.id()) + " <gray>("
+                    + Messages.echapper(d.type()) + ", " + d.caractere().name().toLowerCase(Locale.ROOT) + (d.modeles().isEmpty() ? "" : ", modèle " + Messages.echapper(String.join("/", d.modeles()))) + ")"));
+                s.sendMessage(Messages.brut("<gray>/vorace mob invoquer <mob> [nombre] | info | apparitions | retirer [rayon] | recharger"));
+            }
+        }
+    }
+
     private void paquets(CommandSender s, String[] a) {
         fr.vorace.paquets.Paquets pq = plugin.paquets();
         if (pq == null) { s.sendMessage(Messages.brut("<red>La couche paquets est désactivée (config : paquets.actif) ou n'a pas pu démarrer.")); return; }
@@ -539,7 +599,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         List<String> r = new ArrayList<>();
         if (c.getName().equalsIgnoreCase("emojis")) return r;
         if (a.length == 1) {
-            for (String o : s.hasPermission("vorace.admin") ? List.of("menu", "aide", "reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "paquets", "convertir", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
+            for (String o : s.hasPermission("vorace.admin") ? List.of("menu", "aide", "reload", "give", "objets", "meuble", "bloc", "glyphe", "modele", "mob", "paquets", "convertir", "emojis", "envoyer", "maj", "info", "sources", "pack") : List.of("pack", "emojis")) {
                 if (o.startsWith(a[0].toLowerCase(Locale.ROOT))) r.add(o);
             }
         } else if (a.length == 2 && a[0].equalsIgnoreCase("convertir") && s.hasPermission("vorace.admin")) {
@@ -572,6 +632,10 @@ public final class Commande implements CommandExecutor, TabCompleter {
             if (i != null) for (String n : i.modele().animations().keySet()) if (n.startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(n);
         } else if (a.length >= 4 && a[0].equalsIgnoreCase("modele") && a[1].equalsIgnoreCase("anim") && s.hasPermission("vorace.admin")) {
             for (String o : List.of("boucle", "dessus")) if (o.startsWith(a[a.length - 1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 2 && a[0].equalsIgnoreCase("mob") && s.hasPermission("vorace.admin")) {
+            for (String o : List.of("liste", "invoquer", "info", "apparitions", "retirer", "recharger")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
+        } else if (a.length == 3 && a[0].equalsIgnoreCase("mob") && a[1].equalsIgnoreCase("invoquer") && s.hasPermission("vorace.admin") && plugin.mobs() != null) {
+            for (fr.vorace.mobs.DefinitionMob d : plugin.mobs().definitions()) if (d.id().startsWith(a[2].toLowerCase(Locale.ROOT))) r.add(d.id());
         } else if (a.length == 2 && a[0].equalsIgnoreCase("paquets") && s.hasPermission("vorace.admin")) {
             for (String o : List.of("stats", "journal", "ecoutes")) if (o.startsWith(a[1].toLowerCase(Locale.ROOT))) r.add(o);
         } else if (a.length == 3 && a[0].equalsIgnoreCase("paquets") && s.hasPermission("vorace.admin")) {

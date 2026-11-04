@@ -28,6 +28,23 @@ g["elements"].append({"name": "hb", "type": "cube", "uuid": "hitbox-cube-0001", 
 g["outliner"].append({"name": "hitbox", "origin": [0, 0, 0], "uuid": "hitbox-groupe-0001", "children": ["hitbox-cube-0001"]})
 json.dump(g, open(sys.argv[2], 'w', encoding='utf-8'))
 PY
+# mobs (1.1) : un troupeau de golems paisibles (modèle animé + cerveau + troupeau) et un lapin craintif
+mkdir -p plugins/Vorace/mobs
+cat > plugins/Vorace/mobs/essai.yml <<'MOBS'
+golem_paisible:
+  type: sheep
+  modele: golem_rubis
+  taille: [0.5, 0.6]
+  caractere: paisible
+  troupeau: { cohesion: 5 }
+  laisse: 10
+  nourriture: [grass_block, short_grass]
+lapin_essai:
+  type: rabbit
+  caractere: craintif
+  detection: 24
+  laisse: 10
+MOBS
 echo "eula=true" > eula.txt
 cat > server.properties <<PROPS
 online-mode=false
@@ -78,6 +95,13 @@ cmd "vorace modele taille 1.5"
 sleep 1
 cmd "vorace modele info"
 cmd "vorace modele stop"
+# mobs : troupeau avec modèle et lapin craintif, à 8 blocs du faux joueur
+cmd "vorace mob invoquer golem_paisible 3"
+cmd "vorace mob invoquer lapin_essai"
+sleep 5
+cmd "vorace mob info"
+sleep 3
+cmd "vorace mob info"
 # couche paquets : heure remplacée par midi, un message bloqué, un autre qui passe
 cmd "gamerule doDaylightCycle false"
 cmd "time set 18000"
@@ -126,6 +150,12 @@ echo "erreurs de Vorace dans la console : $ERREURS"
 if [ "$ERREURS" -gt 0 ]; then echo "ECHEC : erreurs de Vorace dans la console"; exit 1; fi
 if [ "$EMPREINTES" -lt 3 ] || [ "${DISTINCTES:-0}" -lt 50 ]; then echo "ECHEC : les modèles ne s'animent pas"; exit 1; fi
 grep -aq 'par-dessus' journal.txt || { echo "ECHEC : animation par-dessus"; exit 1; }
+grep -aq '3 golem_paisible invoqué(s) en troupeau' journal.txt || { echo "ECHEC : invocation des mobs"; exit 1; }
+MOBS_VUS=$(grep -ao 'mob=[a-z_]* action=[a-z]*' journal.txt | sort -u)
+echo "mobs vus : $MOBS_VUS"
+echo "$MOBS_VUS" | grep -q 'mob=golem_paisible' || { echo "ECHEC : les golems de l'essai ne pensent pas"; exit 1; }
+echo "$MOBS_VUS" | grep -q 'mob=lapin_essai action=fuir' || { echo "ECHEC : le lapin craintif ne fuit pas le joueur"; exit 1; }
+if grep -ao 'maison=[0-9.]*/[0-9]*' journal.txt | awk -F'[=/]' '$2 > $3 + 2 {bad=1} END {exit !bad}'; then echo "ECHEC : un mob est sorti de sa laisse"; exit 1; fi
 grep -aq 'taille=1.50 vue=proche' journal.txt || { echo "ECHEC : taille du modèle ou portée d'affichage"; exit 1; }
 grep -aq 'ESSAI PAQUETS heures-modifiees=[1-9][0-9]* messages-bloques=[1-9][0-9]* paquets-recus=[1-9][0-9]* erreurs=0' journal.txt || { echo "ECHEC : couche paquets (côté serveur)"; exit 1; }
 grep -aq 'VORACE-LIBRE' bot.txt || { echo "ECHEC : le message libre n'est pas arrivé au joueur"; exit 1; }

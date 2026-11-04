@@ -190,6 +190,37 @@ public final class VoraceAPI {
         return true;
     }
 
+    // ------------------------------------------------------------------ mobs (1.1)
+
+    /** Fait apparaître un mob de Vorace (mobs/<fichier>.yml) ; sa maison est cet endroit. Null si le mob est inconnu. */
+    public static Entity invoquerMob(String id, org.bukkit.Location ou) {
+        if (plugin == null || plugin.mobs() == null) return null;
+        return plugin.mobs().invoquer(id, ou, null, null);
+    }
+
+    /** Identifiant du mob de Vorace de cette entité, ou null. */
+    public static String mobVorace(Entity e) {
+        if (plugin == null || plugin.mobs() == null) return null;
+        fr.vorace.mobs.Mobs.Suivi s = plugin.mobs().suivi(e);
+        return s == null ? null : s.definition().id();
+    }
+
+    /** Action en cours du mob (« errer », « manger », « fuir »...), ou null. */
+    public static String actionMob(Entity e) {
+        if (plugin == null || plugin.mobs() == null) return null;
+        fr.vorace.mobs.Mobs.Suivi s = plugin.mobs().suivi(e);
+        return s == null ? null : s.cerveau().action().name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** Effraie un mob de Vorace (0 à 1) : il fuit, et son troupeau avec lui s'il a assez peur. Faux si ce n'en est pas un. */
+    public static boolean effrayerMob(Entity e, double peur) {
+        if (plugin == null || plugin.mobs() == null) return false;
+        fr.vorace.mobs.Mobs.Suivi s = plugin.mobs().suivi(e);
+        if (s == null) return false;
+        s.cerveau().effrayer(peur);
+        return true;
+    }
+
     // ------------------------------------------------------------------ paquets (0.7)
 
     /**

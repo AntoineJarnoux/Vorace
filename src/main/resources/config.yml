@@ -95,6 +95,12 @@ modeles:
   # Sons et particules des clés « Effets » des animations de Blockbench.
   effets: true
 
+mobs:
+  # Mobs de Vorace (mobs/*.yml, zones/*.yml, apparitions/*.yml) : cerveau, troupeaux, laisse, besoins.
+  actif: true
+  # Un mob ne réfléchit que si un joueur est à moins de tant de blocs.
+  distance-reflexion: 64
+
 surveillance:
   # Reconstruit le pack tout seul quand un pack source ou un objet change (par exemple après /meg reload).
   actif: true
