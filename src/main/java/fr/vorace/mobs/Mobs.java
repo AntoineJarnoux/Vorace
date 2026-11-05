@@ -210,7 +210,8 @@ public final class Mobs {
                 d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
                 Geometrie.distance(l.getX(), l.getZ(), mx, mz), laisse, troupeau == null ? "" : " troupeau=" + troupeau,
                 apparition == null ? "" : " apparition=" + apparition) + String.format(Locale.ROOT, " parcouru=%.1f", parcouru)
-                + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "");
+                + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "")
+                + String.format(Locale.ROOT, " pos=%.1f,%.1f,%.1f", l.getX(), l.getY(), l.getZ());
         }
     }
 

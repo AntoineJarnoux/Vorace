@@ -54,7 +54,7 @@ demarrer() {
   SERVEUR=$!
   for _ in $(seq 1 400); do [ "$(grep -c 'Done (' journal.txt 2>/dev/null || true)" -gt "${avant:-0}" ] && break; sleep 1; done
 }
-cmd() { echo ">>> $1" >> commandes.txt; echo "$1" >&3; }
+cmd() { echo "$(date -u +%T) >>> $1" >> commandes.txt; echo "$1" >&3; }
 releve() { # releve <début du nom> <fois> <écart>
   for _ in $(seq 1 "$2"); do cmd "vorace mob info $1 Testeur"; sleep "$3"; done
 }
@@ -71,19 +71,31 @@ cmd "time set 1000"
 cmd "gamerule doDaylightCycle false"
 # 1. place à pigeons : vus de 12 blocs (marche, picore), puis le joueur arrive au milieu (envol de la volée)
 read -r _ ID MOB X Y Z N <<< "$(lieu PIGEONS)"
-echo "== PIGEONS $ID ($N pigeons) à $X $Z" >> commandes.txt
+echo "$(date -u +%T) == PIGEONS $ID ($N pigeons) à $X $Z" >> commandes.txt
 aller "$(python3 -c "print($X + 12)")" "$(python3 -c "print($Y + 2)")" "$Z"
 sleep 25
 releve pigeon 5 5
-aller "$X" "$(python3 -c "print($Y + 1)")" "$Z"
+# le joueur arrive à 1,5 bloc d'un pigeon posé de cette place : lui et ses voisins (moins de 8 blocs) doivent s'envoler
+CIBLE=$(python3 - "$ID" <<'PY'
+import re, sys
+t = open('journal.txt', errors='replace').read()
+p = [m.groups() for m in re.finditer(r'mob=pigeon action=(marche|picore|pose) .*?apparition=' + re.escape(sys.argv[1]) + r' .*?pos=([-0-9.]+),([-0-9.]+),([-0-9.]+)', t)]
+if p:
+    a, x, y, z = p[-1]
+    print(float(x) + 1.5, float(y) + 1, z)
+PY
+)
+[ -n "$CIBLE" ] || CIBLE="$X $(python3 -c "print($Y + 1)") $Z"
+echo "$(date -u +%T) == pigeon visé : $CIBLE" >> commandes.txt
+aller $CIBLE
 sleep 1
-releve pigeon 2 2
+releve pigeon 3 1
 aller "$(python3 -c "print($X + 40)")" "$(python3 -c "print($Y + 2)")" "$Z"
 sleep 25
 releve pigeon 2 4
 # 2. bain d'oiseaux : présents vus de loin, partis quand on s'approche, revenus 15 s après le départ du joueur
 read -r _ ID MOB X Y Z N <<< "$(lieu BAIN)"
-echo "== BAIN $ID à $X $Z" >> commandes.txt
+echo "$(date -u +%T) == BAIN $ID à $X $Z" >> commandes.txt
 aller "$(python3 -c "print($X + 9)")" "$(python3 -c "print($Y + 2)")" "$Z"
 sleep 15
 releve bain 2 3
@@ -97,7 +109,7 @@ releve bain 3 3
 for L in PRE VACHES JARDIN FORET; do
   read -r _ ID MOB X Y Z N <<< "$(lieu $L)" || continue
   [ -n "${ID:-}" ] || continue
-  echo "== $L $ID ($N) à $X $Z" >> commandes.txt
+  echo "$(date -u +%T) == $L $ID ($N) à $X $Z" >> commandes.txt
   aller "$(python3 -c "print($X + 14)")" "$(python3 -c "print($Y + 3)")" "$Z"
   sleep 15
   releve "$MOB" 6 5
@@ -113,7 +125,7 @@ BOT=$!
 for _ in $(seq 1 60); do grep -q 'BOT CONNECTE' bot2.txt && break; sleep 1; done
 cmd "gamemode creative Testeur"
 read -r _ ID MOB X Y Z N <<< "$(lieu PRE)"
-echo "== APRES REDEMARRAGE $ID à $X $Z" >> commandes.txt
+echo "$(date -u +%T) == APRES REDEMARRAGE $ID à $X $Z" >> commandes.txt
 aller "$(python3 -c "print($X + 14)")" "$(python3 -c "print($Y + 3)")" "$Z"
 sleep 15
 releve "$MOB" 6 5
@@ -155,6 +167,22 @@ pig = avant.get('pigeon', [])
 if not any(a in ('marche', 'picore') for a, _ in pig): print('ECHEC : pigeons ni en marche ni en train de picorer'); ok = False
 if not pig or max(d for _, d in pig) < 2: print('ECHEC : pigeons immobiles'); ok = False
 if sum(1 for a, _ in pig if a == 'vole') < 3: print('ECHEC : la volée ne part pas quand le joueur arrive'); ok = False
+cmds = open('commandes.txt').read()
+mv = re.search(r'(\d\d:\d\d:\d\d) == pigeon visé', cmds)
+if mv:
+    lig = lignes[0]
+    # relevés de la place dans les 4 s qui suivent l'arrivée à côté du pigeon
+    h0 = sum(int(x) * k for x, k in zip(mv.group(1).split(':'), (3600, 60, 1)))
+    vols = []
+    for bloc in re.split(r'(?=\[\d\d:\d\d:\d\d INFO\]: Vorace » \d+ mob)', lig):
+        m = re.match(r'\[(\d\d):(\d\d):(\d\d)', bloc)
+        if not m: continue
+        h = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
+        if 0 <= h - h0 <= 5:
+            acts = re.findall(r'mob=pigeon action=(\S+) [^\n]*?apparition=' + re.escape(open('lieux.txt').read().split()[1]) + ' ', bloc)
+            vols.append((m.group(0)[1:], acts.count('vole'), len(acts)))
+    print('volée : pigeons de la place en vol juste après l\'arrivée du joueur :', vols)
+    if not any(v >= 2 for _, v, _ in vols): print('ECHEC : la volée ne part pas à l\'approche'); ok = False
 bain = [a for a, _ in avant.get('bain_oiseaux', [])]
 if 'partis' not in bain or bain[-1] != 'presents': print('ECHEC : les oiseaux du bain ne partent pas ou ne reviennent pas'); ok = False
 for k in ('mouton', 'vache'):
