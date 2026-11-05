@@ -48,13 +48,15 @@ lieu() { grep "^$1 " lieux.txt | head -1; }
 rm -f console && mkfifo console
 exec 3<>console
 demarrer() {
+  local avant
+  avant=$(grep -c 'Done (' journal.txt 2>/dev/null || true)
   java -Xmx3G -jar paper.jar --nogui < console >> journal.txt 2>&1 &
   SERVEUR=$!
-  for _ in $(seq 1 400); do grep -q 'Done (' journal.txt 2>/dev/null && break; sleep 1; done
+  for _ in $(seq 1 400); do [ "$(grep -c 'Done (' journal.txt 2>/dev/null || true)" -gt "${avant:-0}" ] && break; sleep 1; done
 }
 cmd() { echo ">>> $1" >> commandes.txt; echo "$1" >&3; }
 releve() { # releve <début du nom> <fois> <écart>
-  for _ in $(seq 1 "$2"); do cmd "execute as Testeur at Testeur run vorace mob info $1"; sleep "$3"; done
+  for _ in $(seq 1 "$2"); do cmd "vorace mob info $1 Testeur"; sleep "$3"; done
 }
 aller() { # aller <x> <y> <z> : téléporte le faux joueur
   cmd "tp Testeur $1 $2 $3"

@@ -477,10 +477,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
         if (m == null) { s.sendMessage(Messages.brut("<red>Les mobs sont désactivés (config : mobs.actif) ou n'ont pas pu démarrer.")); return; }
         String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
         Player p = s instanceof Player j ? j : null;
-        // « execute as <joueur> at <joueur> run vorace mob ... » (console, bloc de commande) : autour de ce joueur
-        org.bukkit.entity.Entity cible = p != null ? p : s instanceof org.bukkit.command.ProxiedCommandSender ps
-            && ps.getCallee() instanceof org.bukkit.entity.Entity en ? en : null;
-        org.bukkit.Location ici = cible != null ? cible.getLocation() : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
+        org.bukkit.Location ici = p != null ? p.getLocation() : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
         switch (act) {
             case "invoquer" -> {
                 if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace mob invoquer <mob> [nombre]")); return; }
@@ -497,7 +494,10 @@ public final class Commande implements CommandExecutor, TabCompleter {
             case "info" -> {
                 s.sendMessage(Messages.brut("<gray>" + m.suivis().size() + " mob(s) de Vorace chargé(s)"
                     + (m.derniereErreur() == null ? "" : ", dernière erreur : <red>" + Messages.echapper(m.derniereErreur()))));
-                String filtre = a.length > 2 ? a[2].toLowerCase(Locale.ROOT) : null;
+                String filtre = a.length > 2 && !a[2].equals("*") ? a[2].toLowerCase(Locale.ROOT) : null;
+                // depuis la console : /vorace mob info <début du nom|*> <joueur> relève les mobs autour de ce joueur
+                Player autour = a.length > 3 ? org.bukkit.Bukkit.getPlayerExact(a[3]) : null;
+                if (autour != null) ici = autour.getLocation();
                 List<fr.vorace.mobs.Mobs.Suivi> proches = filtre == null ? m.proches(ici, 32, 16)
                     : m.proches(ici, 48, 1000).stream().filter(x -> x.definition().id().startsWith(filtre)).limit(48).toList();
                 if (proches.isEmpty()) { s.sendMessage(Messages.brut("<yellow>Aucun mob de Vorace à moins de 32 blocs.")); return; }
@@ -529,7 +529,7 @@ public final class Commande implements CommandExecutor, TabCompleter {
                     + " point(s) d'apparition, " + m.suivis().size() + " mob(s) chargé(s) :"));
                 for (fr.vorace.mobs.DefinitionMob d : m.definitions()) s.sendMessage(Messages.brut("<white> " + Messages.echapper(d.id()) + " <gray>("
                     + Messages.echapper(d.type()) + ", " + d.caractere().name().toLowerCase(Locale.ROOT) + (d.modeles().isEmpty() ? "" : ", modèle " + Messages.echapper(String.join("/", d.modeles()))) + ")"));
-                s.sendMessage(Messages.brut("<gray>/vorace mob invoquer <mob> [nombre] | info [début du nom] | apparitions | retirer [rayon] | recharger"));
+                s.sendMessage(Messages.brut("<gray>/vorace mob invoquer <mob> [nombre] | info [début du nom|*] [joueur] | apparitions | retirer [rayon] | recharger"));
             }
         }
     }

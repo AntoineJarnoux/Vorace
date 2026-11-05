@@ -250,8 +250,9 @@ mouton:
   poissons, abeilles, grenouilles) ou `ia: aucune`.
 - **Performances** : un mob loin de tout joueur (`mobs.distance-reflexion`, 64 blocs) ne réfléchit pas ; les autres
   réfléchissent deux fois par seconde, chacun à son tour. Les besoins sont gardés avec l'entité.
-- `/vorace mob [liste|invoquer <mob> [nombre]|info [début du nom]|apparitions|retirer|recharger]` ; `info` donne pour chaque
-  mob son action, ses besoins, sa distance à la maison et la distance parcourue depuis son apparition.
+- `/vorace mob [liste|invoquer <mob> [nombre]|info [début du nom|*] [joueur]|apparitions|retirer|recharger]` ; `info` donne pour
+  chaque mob son action, ses besoins, sa distance à la maison et la distance parcourue depuis son apparition (depuis la console,
+  le nom d'un joueur relève les mobs autour de lui).
 - API : `VoraceAPI.invoquerMob`, `mobVorace`, `actionMob`, `effrayerMob` ; événement `VoraceMobActionEvent`
   à chaque changement d'action.
 
