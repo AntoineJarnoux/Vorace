@@ -97,10 +97,20 @@ public final class Vol {
     }
 
     private double[] pointAuHasard(double mx, double mz, double laisse) {
-        double a = hasard.nextDouble() * Math.PI * 2;
-        double d = papillon ? 2 + hasard.nextDouble() * 5 : 6 + hasard.nextDouble() * 14;
-        return dansLaisse(x + Math.cos(a) * d, z + Math.sin(a) * d, mx, mz, laisse);
+        double[] p = null;
+        for (int k = 0; k < 8; k++) {
+            double a = hasard.nextDouble() * Math.PI * 2;
+            double d = papillon ? 2 + hasard.nextDouble() * 5 : 6 + hasard.nextDouble() * 14;
+            p = dansLaisse(x + Math.cos(a) * d, z + Math.sin(a) * d, mx, mz, laisse);
+            if (!aEviter(p[0], p[1])) break;
+        }
+        return p;
     }
+
+    /** Endroit à éviter (un joueur arrêté près de la place) : on ne s'y pose pas, on n'y marche pas. */
+    private double evX, evZ, evR;
+    public void eviter(double x, double z, double rayon) { evX = x; evZ = z; evR = rayon; }
+    private boolean aEviter(double x, double z) { return evR > 0 && Math.hypot(x - evX, z - evZ) < evR; }
 
     /** Avance de dt secondes. */
     public void pas(double dt, Sol sol, double mx, double mz, double laisse) {
@@ -179,6 +189,7 @@ public final class Vol {
             for (int essai = 0; essai < 6 && !marche; essai++) {
                 double a = hasard.nextDouble() * Math.PI * 2, d = 1 + hasard.nextDouble() * 3;
                 double[] p = dansLaisse(x + Math.cos(a) * d, z + Math.sin(a) * d, mx, mz, laisse);
+                if (aEviter(p[0], p[1])) continue;
                 if (!plat(sol, p[0], p[1]) || !plat(sol, (x + p[0]) / 2, (z + p[1]) / 2)) continue;
                 px = p[0]; pz = p[1]; marche = true;
             }

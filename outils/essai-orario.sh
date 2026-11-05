@@ -141,7 +141,7 @@ while read -r QUOI ID MOB X Y Z N; do
   note "ESPECE $MOB $ID ($N) à $X $Y $Z"
   aller "$(plus "$X" 10)" "$(plus "$Y" 3)" "$Z"
   sleep 12
-  releve "$MOB" 5 4
+  releve "$MOB" 9 4
 done < lieux.txt
 kill $BOT 2>/dev/null; sleep 2
 
@@ -199,12 +199,30 @@ def resume(t):
     return r
 avant, apres = resume(lignes[0]), resume(lignes[1])
 ok = True
-print('espèce : actions vues ; plus longue distance parcourue par un individu ; nombre de relevés')
-for k, v in sorted(avant.items()):
-    print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):44s} {max(d for _, d in v):6.1f} blocs  ({len(v)})')
-print('après redémarrage :')
-for k, v in sorted(apres.items()):
-    print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):44s} {max(d for _, d in v):6.1f} blocs  ({len(v)})')
+def observe(t):
+    """par espèce : [(trajet pendant l'observation, déplacement net, durée, part des relevés en mouvement)] par individu"""
+    r = collections.defaultdict(list)
+    for i, obs in individus(t).items():
+        obs.sort()
+        if len(obs) < 2: continue
+        traj = sum(math.dist(a[4], b[4]) for a, b in zip(obs, obs[1:]))
+        net = math.dist(obs[0][4], obs[-1][4])
+        bouge = sum(1 for a, b in zip(obs, obs[1:]) if math.dist(a[4], b[4]) > 0.3) / (len(obs) - 1)
+        r[obs[0][1]].append((traj, net, obs[-1][0] - obs[0][0], bouge))
+    return r
+print('espèce : actions vues ; PENDANT L\'OBSERVATION, par individu : trajet relevé (positions successives), part des relevés en')
+print('mouvement ; le meilleur et le moins mobile ; nombre d\'individus')
+for phase, t, res in (('avant', lignes[0], avant), ('après redémarrage', lignes[1], apres)):
+    if phase != 'avant': print('après redémarrage :')
+    ob = observe(t)
+    for k, v in sorted(res.items()):
+        o = ob.get(k, [])
+        if o:
+            b = max(o); m = min(o)
+            txt = f'meilleur {b[0]:5.1f} blocs en {b[2]:3d} s ({b[3]:.0%} en mouvement), moins mobile {m[0]:5.1f} blocs en {m[2]:3d} s ({m[3]:.0%})'
+        else:
+            txt = ''
+        print(f'  {k:13s} {", ".join(sorted(set(a for a, _ in v))):40s} {txt}  [{len(o)}]')
 attendues = [l.split()[2] for l in open('lieux.txt') if l.startswith('ESPECE ')]
 manquent = [m for m in attendues if m not in avant]
 if manquent: print('ECHEC : espèces jamais relevées :', manquent); ok = False

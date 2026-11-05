@@ -567,6 +567,8 @@ public final class Mobs {
             double env = s.d.envol() > 0 ? s.d.envol() : s.d.detection();
             Location pl = proche.getLocation();
             double dj = Math.sqrt(dd[0]);
+            // un joueur qui reste près d'eux : ils ne marchent ni ne se posent à moins de deux fois la distance d'envol
+            s.vol.eviter(pl.getX(), pl.getZ(), dj < env * 4 ? env * 2 : 0);
             if (dj < env * (proche.isSneaking() ? 0.5 : 1) && s.vol.etat() != Vol.Etat.VOL) {
                 s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), l.getY()), s.mx, s.mz, s.laisse);
                 // la volée part ensemble : les oiseaux de la même espèce posés à moins de 12 blocs, et toute la bande du même

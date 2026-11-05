@@ -140,7 +140,7 @@ public final class Cerveau {
             action = meilleure;
             temps = 0;
             duree = switch (meilleure) {
-                case REPOS -> 4 + hasard.nextDouble() * 8;
+                case REPOS -> 3 + hasard.nextDouble() * 5;
                 case ERRER -> 6 + hasard.nextDouble() * 8;
                 default -> 600;
             };
