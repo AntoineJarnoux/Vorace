@@ -76,12 +76,14 @@ aller "$(python3 -c "print($X + 12)")" "$(python3 -c "print($Y + 2)")" "$Z"
 sleep 25
 releve pigeon 5 5
 # le joueur arrive à 1,5 bloc d'un pigeon posé de cette place : lui et ses voisins (moins de 8 blocs) doivent s'envoler
+releve pigeon 1 1
 CIBLE=$(python3 - "$ID" <<'PY'
 import re, sys
 t = open('journal.txt', errors='replace').read()
-p = [m.groups() for m in re.finditer(r'mob=pigeon action=(marche|picore|pose) .*?apparition=' + re.escape(sys.argv[1]) + r' .*?pos=([-0-9.]+),([-0-9.]+),([-0-9.]+)', t)]
+dernier = t.split('mob(s) de Vorace charg')[-1]          # le relevé qui vient d'être fait
+p = [m.groups() for m in re.finditer(r'mob=pigeon action=(marche|picore|pose) .*?apparition=' + re.escape(sys.argv[1]) + r' .*?pos=([-0-9.]+),([-0-9.]+),([-0-9.]+)', dernier)]
 if p:
-    a, x, y, z = p[-1]
+    a, x, y, z = p[0]
     print(float(x) + 1.5, float(y) + 1, z)
 PY
 )
