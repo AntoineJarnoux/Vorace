@@ -24,6 +24,8 @@ public final class Vol {
     private double yaw;
     /** Marche au sol (posé) : vitesse (0 = immobile), but, pause restante. */
     private double vitesseMarche, px, pz, attente = 1;
+    /** Essais de marche ratés d'affilée (perché sur un toit en pente, une branche) : il repart plutôt que de rester figé. */
+    private int rates;
     private boolean marche;
     /** Distance parcourue à pied depuis l'apparition (pour /vorace mob info et les essais). */
     private double parcouru;
@@ -60,7 +62,7 @@ public final class Vol {
     /** Fait trottiner l'oiseau au sol quand il est posé (blocs par seconde) ; il reste alors posé plus longtemps. */
     public Vol marcheur(double vitesse) {
         vitesseMarche = Math.max(0, vitesse);
-        if (vitesseMarche > 0 && etat == Etat.POSE) duree = Math.max(duree, 20 + hasard.nextDouble() * 40);
+        if (vitesseMarche > 0 && etat == Etat.POSE && temps > 0) duree = Math.max(duree, 20 + hasard.nextDouble() * 40);
         attente = 0.5 + hasard.nextDouble() * 2;
         return this;
     }
@@ -180,7 +182,13 @@ public final class Vol {
                 if (!plat(sol, p[0], p[1]) || !plat(sol, (x + p[0]) / 2, (z + p[1]) / 2)) continue;
                 px = p[0]; pz = p[1]; marche = true;
             }
-            if (!marche) attente = 1 + hasard.nextDouble() * 2;
+            if (!marche) {
+                attente = 1 + hasard.nextDouble() * 2;
+                // perché là où il ne peut pas marcher : il s'envole ailleurs au bout de quelques secondes
+                if (++rates >= 2) duree = Math.min(duree, temps + 1 + hasard.nextDouble() * 3);
+            } else {
+                rates = 0;
+            }
             return;
         }
         double dx = px - x, dz = pz - z, n = Math.hypot(dx, dz);

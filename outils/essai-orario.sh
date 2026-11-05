@@ -42,6 +42,9 @@ def ligne(nom, k):
 places = sorted((k for k in ok if k.startswith('pigeons_place_') and ok[k].get('nombre', 1) >= 4), key=lambda k: -ok[k]['nombre'])
 for i, k in enumerate(places[:2]):
     ligne(f'PIGEONS{i + 1}', k)
+ant = min((k for k in ok if k.startswith('pigeons_place_')), key=lambda k: (ok[k]['centre'][0] - 245) ** 2 + (ok[k]['centre'][2] - 229) ** 2, default=None)
+if ant:
+    ligne('ANTOINE', ant)
 bains = sorted(k for k in ok if ok[k]['mob'] == 'bain_oiseaux')
 if bains:
     ligne('BAIN', bains[0])
@@ -110,6 +113,15 @@ for P in PIGEONS1 PIGEONS2; do
   sleep 4
 done
 
+# 1 bis. la place de la capture d'Antoine (pigeon immobile en 245 64 229) : 60 s d'observation, relevé toutes les 5 s
+read -r _ ID MOB X Y Z N <<< "$(grep '^ANTOINE ' lieux.txt)"
+if [ -n "${ID:-}" ]; then
+  note "ANTOINE $ID ($N pigeons) à $X $Z : joueur à 14 blocs, immobile"
+  aller "$(plus "$X" 14)" "$(plus "$Y" 2)" "$Z"
+  sleep 3
+  releve pigeon 13 5
+fi
+
 # 2. bain d'oiseaux : présents de loin, partis à 1,5 bloc, relevé toutes les 2 s après le départ du joueur
 read -r _ ID MOB X Y Z N <<< "$(grep '^BAIN ' lieux.txt)"
 note "BAIN $ID à $X $Z"
@@ -158,7 +170,7 @@ echo "===== Mobs (console)"; grep -aE 'mob=|[0-9]+ mob\(s\)|REDEMARRAGE|Aucun mo
 echo "===== Erreurs"; grep -aiE 'exception|at fr\.vorace|Mobs : erreur' journal.txt | head -20
 echo "===== Bilan"
 python3 - <<'PY'
-import re, collections
+import re, collections, math
 j = open('journal.txt', errors='replace').read().split('===== REDEMARRAGE')
 lignes = [j[0], j[1] if len(j) > 1 else '']
 cmds = open('commandes.txt').read()
@@ -172,6 +184,14 @@ def relevés(t):
         if not m: continue
         res.append((m.group(1), re.findall(r'mob=(\S+) action=(\S+) .*?apparition=(\S+) parcouru=([0-9.]+)', bloc)))
     return res
+def individus(t):
+    """{id: [(secondes, mob, action, parcouru, (x, z))]}"""
+    r = collections.defaultdict(list)
+    for h, bloc in [(m.group(1), m.group(0)) for m in re.finditer(r'\[(\d\d:\d\d:\d\d) INFO\]: Vorace » id=\S+ mob=[^\n]*', t)]:
+        m = re.search(r'id=(\S+) mob=(\S+) action=(\S+) .*?parcouru=([0-9.]+).*?pos=([-0-9.]+),[-0-9.]+,([-0-9.]+)', bloc)
+        if m:
+            r[m.group(1)].append((secs(h), m.group(2), m.group(3), float(m.group(4)), (float(m.group(5)), float(m.group(6)))))
+    return r
 def resume(t):
     r = collections.defaultdict(list)
     for _, lst in relevés(t):
@@ -213,6 +233,34 @@ if mb:
     retour = [secs(h) - h0 for h, a in etats if secs(h) >= h0 and a == 'presents']
     print('bain : retour des oiseaux', (f'{retour[0]} s après le départ du joueur' if retour else 'jamais'))
     if 'partis' not in [a for _, a in etats] or not retour: print('ECHEC : les oiseaux du bain ne partent pas ou ne reviennent pas'); ok = False
+# chaque individu : jamais figé (même place, rien parcouru) plus de 15 s, sauf au repos, en train de manger, boire ou dormir
+figes = []
+for phase, t in (('avant', lignes[0]), ('après redémarrage', lignes[1])):
+    ind = individus(t)
+    for i, obs in ind.items():
+        obs.sort()
+        mob = obs[0][1]
+        if mob == 'bain_oiseaux': continue
+        deb = 0
+        for k in range(1, len(obs) + 1):
+            if k == len(obs) or abs(obs[k][3] - obs[deb][3]) > 0.3 or math.dist(obs[k][4], obs[deb][4]) > 0.3:
+                duree = obs[k - 1][0] - obs[deb][0]
+                acts = {a for _, _, a, _, _ in obs[deb:k]}
+                if duree >= 15 and not acts <= {'repos', 'manger', 'boire', 'dormir'}:
+                    figes.append((phase, mob, i, duree, sorted(acts)))
+                deb = k
+    print(f'individus suivis ({phase}) :', len(ind), '; par espèce :', dict(collections.Counter(o[0][1] for o in ind.values())))
+if figes: print('ECHEC : individus figés plus de 15 s (phase, espèce, id, durée, actions) :', figes); ok = False
+else: print('aucun individu figé plus de 15 s (hors repos, repas, sommeil)')
+mv = re.search(r'(\d\d:\d\d:\d\d) == ANTOINE (\S+)', cmds)
+if mv:
+    place = mv.group(2)
+    ind = individus(lignes[0])
+    print(f'place de la capture d\'Antoine ({place}), 60 s : déplacement de chaque pigeon (parcouru pendant l\'observation, actions vues)')
+    for i, obs in sorted(ind.items()):
+        o = [x for x in obs if x[1] == 'pigeon' and secs(mv.group(1)) <= x[0] <= secs(mv.group(1)) + 75]
+        if len(o) >= 3 and re.search(re.escape(i) + r' mob=pigeon [^\n]*apparition=' + re.escape(place), lignes[0]):
+            print(f'   {i} : {o[-1][3] - o[0][3]:5.1f} blocs en {o[-1][0] - o[0][0]} s ; {sorted({x[2] for x in o})}')
 print('ESSAI ORARIO OK' if ok else 'ESSAI ORARIO EN ECHEC')
 raise SystemExit(0 if ok else 1)
 PY

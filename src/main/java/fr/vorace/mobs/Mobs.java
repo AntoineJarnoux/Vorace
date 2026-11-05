@@ -187,7 +187,7 @@ public final class Mobs {
         Vol vol;
         boolean actif;
         /** Distance parcourue (au sol ou en vol) depuis son apparition, et dernière position vue. */
-        double parcouru;
+        double parcouru, dernierPas;
         double avantX = Double.NaN, avantZ;
 
         Suivi(Entity e, DefinitionMob d) {
@@ -205,9 +205,10 @@ public final class Mobs {
             String act = vol != null ? (vol.etat() == Vol.Etat.POSE ? (vol.marche() ? "marche" : vol.marcheur() ? "picore" : "pose")
                 : vol.etat() == Vol.Etat.VOL ? "vole" : "atterrit")
                 : d.decor() ? (envolFin >= 0 ? "partis" : "presents")
+                : c.action() == Action.REPOS && dernierPas > 0.3 ? (e.isInWater() ? "nage" : "flane")
                 : c.action().name().toLowerCase(Locale.ROOT);
-            return String.format(Locale.ROOT, "mob=%s action=%s faim=%.2f soif=%.2f fatigue=%.2f peur=%.2f colere=%.2f maison=%.1f/%.0f%s%s",
-                d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
+            return String.format(Locale.ROOT, "id=%s mob=%s action=%s faim=%.2f soif=%.2f fatigue=%.2f peur=%.2f colere=%.2f maison=%.1f/%.0f%s%s",
+                e.getUniqueId().toString().substring(0, 6), d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
                 Geometrie.distance(l.getX(), l.getZ(), mx, mz), laisse, troupeau == null ? "" : " troupeau=" + troupeau,
                 apparition == null ? "" : " apparition=" + apparition) + String.format(Locale.ROOT, " parcouru=%.1f", parcouru)
                 + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "")
@@ -551,6 +552,7 @@ public final class Mobs {
         if (!Double.isNaN(s.avantX)) {
             double pas = Math.hypot(l.getX() - s.avantX, l.getZ() - s.avantZ);
             if (pas < 8) s.parcouru += pas;            // au-delà : téléportation, pas un déplacement
+            s.dernierPas = pas < 8 ? pas : 0;
         }
         s.avantX = l.getX(); s.avantZ = l.getZ();
         double[] dd = new double[1];
@@ -819,7 +821,15 @@ public final class Mobs {
                     Location m = menace != null ? menace.getLocation() : l.clone().add(hasard.nextDouble() - 0.5, 0, hasard.nextDouble() - 0.5);
                     double[] p = Geometrie.fuite(l.getX(), l.getZ(), m.getX(), m.getZ(), s.mx, s.mz, s.laisse, 10);
                     Location c = sol(w, p[0], l.getY(), p[1], false);
-                    if (c != null) mob.getPathfinder().moveTo(c, v * 1.6);
+                    boolean ok = c != null && mob.getPathfinder().moveTo(c, v * 1.6);
+                    // pas de chemin à l'opposé (pente, falaise, mur) : il file ailleurs dans sa laisse plutôt que de rester figé
+                    for (int k = 0; !ok && k < 6; k++) {
+                        double[] q = Geometrie.errance(l.getX(), l.getZ(), s.mx, s.mz, s.laisse, hasard,
+                            (x, z) -> sol(w, x, l.getY(), z, false) != null);
+                        Location c2 = sol(w, q[0], l.getY(), q[1], false);
+                        ok = c2 != null && mob.getPathfinder().moveTo(c2, v * 1.6);
+                    }
+                    if (!ok) s.c.peur *= 0.5;                 // vraiment coincé : il se calme au lieu de trembler sur place
                     s.prochainPlan = tic + 30;
                 }
             }
