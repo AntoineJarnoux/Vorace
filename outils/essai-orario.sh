@@ -246,6 +246,10 @@ for mv in re.finditer(r'(\d\d:\d\d:\d\d) == pigeon visé \((\S+)\)', cmds):
 mb = re.search(r'(\d\d:\d\d:\d\d) == BAIN joueur reparti', cmds)
 etats = [(h, a) for h, lst in relevés(lignes[0]) for mob, a, _, _ in lst if mob == 'bain_oiseaux']
 print('bain d\'oiseaux :', etats)
+fx = re.findall(r'\[(\d\d:\d\d:\d\d) INFO\]: Vorace » id=\S+ mob=bain_oiseaux action=(\S+) .*?animation=(\S+) sons=(\d+) particules=(\d+)', lignes[0])
+if fx:
+    print('bain d\'oiseaux, animation jouée par Vorace et effets émis depuis son apparition (heure, état, animation, sons, particules) :', fx)
+    if int(fx[-1][4]) == 0: print('ECHEC : le bain d\'oiseaux n\'émet aucune particule'); ok = False
 if mb:
     h0 = secs(mb.group(1))
     retour = [secs(h) - h0 for h, a in etats if secs(h) >= h0 and a == 'presents']

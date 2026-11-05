@@ -214,7 +214,17 @@ public final class Mobs {
                 Geometrie.distance(l.getX(), l.getZ(), mx, mz), laisse, troupeau == null ? "" : " troupeau=" + troupeau,
                 apparition == null ? "" : " apparition=" + apparition) + String.format(Locale.ROOT, " parcouru=%.1f", parcouru)
                 + (vol != null ? String.format(Locale.ROOT, " a-pied=%.1f", vol.parcouru()) : "")
-                + String.format(Locale.ROOT, " pos=%.1f,%.1f,%.1f", l.getX(), l.getY(), l.getZ());
+                + String.format(Locale.ROOT, " pos=%.1f,%.1f,%.1f", l.getX(), l.getY(), l.getZ())
+                + effetsJoues();
+        }
+
+        /** Décors vivants : sons et particules joués par leurs animations (preuve que l'animation tourne en jeu). */
+        private String effetsJoues() {
+            if (!d.decor() || plugin.modeles() == null) return "";
+            Modeles.Instance i = plugin.modeles().instance(e);
+            if (i == null) return " modele=absent";
+            String an = i.animation();
+            return String.format(Locale.ROOT, " animation=%s sons=%d particules=%d", an == null ? "-" : an, i.sonsJoues(), i.particulesJouees());
         }
     }
 

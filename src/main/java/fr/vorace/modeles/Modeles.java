@@ -780,6 +780,11 @@ public final class Modeles {
             return maintenant;
         }
 
+        /** Sons et particules joués depuis l'apparition (pour /vorace mob info). */
+        private int sonsJoues, particulesJouees;
+        public int sonsJoues() { return sonsJoues; }
+        public int particulesJouees() { return particulesJouees; }
+
         private void effet(Animation a, ModeleBB.Evenement e) {
             fr.vorace.api.VoraceModeleEffetEvent ev = new fr.vorace.api.VoraceModeleEffetEvent(base, modele.id(), a.nom(), e.type(), e.valeur());
             Bukkit.getPluginManager().callEvent(ev);
@@ -790,6 +795,7 @@ public final class Modeles {
             switch (e.type()) {
                 case "sound" -> {
                     String son = e.valeur().toLowerCase(Locale.ROOT);
+                    sonsJoues++;
                     if (spectateurs == null) w.playSound(l, son, org.bukkit.SoundCategory.NEUTRAL, 1f, 1f);
                     else for (UUID u : spectateurs) { Player j = Bukkit.getPlayer(u); if (j != null) j.playSound(l, son, org.bukkit.SoundCategory.NEUTRAL, 1f, 1f); }
                 }
@@ -800,6 +806,7 @@ public final class Modeles {
                     try { p = org.bukkit.Registry.PARTICLE_TYPE.get(NamespacedKey.minecraft(nom)); } catch (IllegalArgumentException ignore) { }
                     // particule de Bedrock, inconnue ou qui demande des données : seul l'événement est envoyé
                     if (p == null || p.getDataType() != Void.class) return;
+                    particulesJouees++;
                     if (spectateurs == null) w.spawnParticle(p, l, 6, 0.2, 0.2, 0.2, 0.02);
                     else for (UUID u : spectateurs) { Player j = Bukkit.getPlayer(u); if (j != null) j.spawnParticle(p, l, 6, 0.2, 0.2, 0.2, 0.02); }
                 }
