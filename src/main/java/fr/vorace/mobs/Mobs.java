@@ -567,11 +567,11 @@ public final class Mobs {
             double env = s.d.envol() > 0 ? s.d.envol() : s.d.detection();
             Location pl = proche.getLocation();
             double dj = Math.sqrt(dd[0]);
-            if (dj < env * (proche.isSneaking() ? 0.5 : 1) && !s.vol.enVol()) {
+            if (dj < env * (proche.isSneaking() ? 0.5 : 1) && s.vol.etat() != Vol.Etat.VOL) {
                 s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), l.getY()), s.mx, s.mz, s.laisse);
                 // la volée part ensemble : les oiseaux de la même espèce posés à moins de 12 blocs s'envolent aussi
                 for (Suivi o : suivis.values()) {
-                    if (o != s && o.vol != null && o.d == s.d && !o.vol.enVol() && o.e.getWorld().equals(e.getWorld())
+                    if (o != s && o.vol != null && o.d == s.d && o.vol.etat() != Vol.Etat.VOL && o.e.getWorld().equals(e.getWorld())
                         && o.e.getLocation().distanceSquared(l) < 144) {
                         o.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), o.e.getLocation().getY()), o.mx, o.mz, o.laisse);
                         o.actif = true;

@@ -69,7 +69,7 @@ public final class Vol {
 
     /** Un joueur approche : s'envoler à l'opposé. */
     public void effrayer(double menX, double menZ, Sol sol, double mx, double mz, double laisse) {
-        if (etat != Etat.POSE) return;
+        if (etat == Etat.VOL) return;                // en train de se poser à côté d'un joueur : il remonte et va plus loin
         double ax = x - menX, az = z - menZ, n = Math.hypot(ax, az);
         if (n < 1e-6) { ax = 1; n = 1; }
         double d = papillon ? 4 : 10;
