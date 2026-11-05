@@ -1,12 +1,14 @@
 name: Essai Orario
 
-# Essai sur la vraie map d'Orario (zip du serveur publié dans la release « essai-orario ») : animaux, pigeons, bains
-# d'oiseaux, redémarrage. Lancé à la main (Actions > Essai Orario > Run workflow).
+# Essai sur la vraie map d'Orario (extrait du serveur : 2 fichiers de région du centre et de l'est, animaux, modèles, rangé
+# dans la branche « essai-orario-donnees ») : pigeons, bains d'oiseaux, moutons, vaches, chats, cerfs, redémarrage. Lancé par un commit dont le message contient [orario], ou à la main.
 on:
+  push:
   workflow_dispatch:
 
 jobs:
   essai-orario:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[orario]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -25,10 +27,10 @@ jobs:
           node-version: 22
       - name: Compiler Vorace
         run: gradle build -x test -PpaperApi="1.21.1-R0.1-SNAPSHOT" && ls build/libs
-      - name: Serveur Orario (release essai-orario)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release download essai-orario --pattern '*.zip' --dir donnees && ls -la donnees
+      - name: Serveur Orario (branche essai-orario-donnees)
+        run: |
+          git fetch --depth 1 origin essai-orario-donnees
+          mkdir -p donnees && git show FETCH_HEAD:Orario_essai.zip > donnees/Orario_essai.zip && ls -la donnees
       - name: Faux joueur
         run: cd outils && npm init -y > /dev/null && npm install --no-audit --no-fund mineflayer && pip install pyyaml
       - name: Essai sur la map

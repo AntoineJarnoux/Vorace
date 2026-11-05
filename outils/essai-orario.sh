@@ -9,8 +9,8 @@ JAR=$(cd "$2" && ls "$PWD"/Vorace-*.jar | head -1)
 OUTILS=$(cd "$(dirname "$0")" && pwd)
 mkdir -p essai-orario && cd essai-orario
 unzip -q -o "$ZIP"
-SRV=$(dirname "$(find . -maxdepth 3 -name 'Orario' -type d | head -1)")
-cd "$SRV"
+SRV=$(dirname "$(find . -maxdepth 3 -name 'level.dat' -path '*Orario*' | head -1)")
+cd "$SRV/.."
 rm -f plugins/Vorace-*.jar && cp "$JAR" plugins/
 URL=$(curl -fsSL "https://fill.papermc.io/v3/projects/paper/versions/1.21.4/builds/latest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["downloads"]["server:default"]["url"])')
 curl -fsSL -o paper.jar "$URL"
@@ -28,11 +28,15 @@ import yaml, glob
 ap = {}
 for f in glob.glob('plugins/Vorace/apparitions/*.yml'):
     ap.update(yaml.safe_load(open(f)) or {})
+import os
+def dedans(c):  # loin du bord des fichiers de région fournis (le reste du monde n'est pas dans le zip d'essai)
+    rx, rz = int(c[0] // 512), int(c[2] // 512)
+    return os.path.exists(f'Orario/region/r.{rx}.{rz}.mca') and 96 <= c[0] % 512 <= 416 and 96 <= c[2] % 512 <= 416
 def premier(prefixe, mini=1):
     for k, v in sorted(ap.items()):
-        if k.startswith(prefixe) and v.get('nombre', 1) >= mini:
+        if k.startswith(prefixe) and v.get('nombre', 1) >= mini and dedans(v['centre']):
             c = v['centre']; return k, v['mob'], c, v.get('nombre', 1)
-for nom, (pre, mini) in {'PIGEONS': ('pigeons_place_', 4), 'BAIN': ('bain_oiseaux_', 1), 'PRE': ('mouton_', 4), 'VACHES': ('vache_', 3),
+for nom, (pre, mini) in {'PIGEONS': ('pigeons_place_', 4), 'BAIN': ('bain_oiseaux_', 1), 'PRE': ('mouton_', 2), 'VACHES': ('vache_', 3),
                          'JARDIN': ('chat_jardin_', 1), 'FORET': ('cerf_', 2)}.items():
     r = premier(pre, mini)
     if r:
