@@ -241,17 +241,20 @@ for phase, t in (('avant', lignes[0]), ('après redémarrage', lignes[1])):
         obs.sort()
         mob = obs[0][1]
         if mob == 'bain_oiseaux': continue
-        deb = 0
-        for k in range(1, len(obs) + 1):
-            if k == len(obs) or abs(obs[k][3] - obs[deb][3]) > 0.3 or math.dist(obs[k][4], obs[deb][4]) > 0.3:
-                duree = obs[k - 1][0] - obs[deb][0]
-                acts = {a for _, _, a, _, _ in obs[deb:k]}
-                if duree >= 15 and not acts <= {'repos', 'manger', 'boire', 'dormir'}:
-                    figes.append((phase, mob, i, duree, sorted(acts)))
+        # suites de relevés consécutifs où il VEUT se déplacer (ni repos, ni repas, ni sommeil) sans bouger d'un pouce
+        REPOS = {'repos', 'manger', 'boire', 'dormir', 'pose', 'presents', 'partis'}
+        deb = None
+        for k in range(len(obs) + 1):
+            fin = k == len(obs) or obs[k][2] in REPOS or (deb is not None and (abs(obs[k][3] - obs[deb][3]) > 0.3 or math.dist(obs[k][4], obs[deb][4]) > 0.3))
+            if fin:
+                if deb is not None and obs[k - 1][0] - obs[deb][0] >= 10:
+                    figes.append((phase, mob, i, obs[k - 1][0] - obs[deb][0], sorted({a for _, _, a, _, _ in obs[deb:k]})))
+                deb = k if k < len(obs) and obs[k][2] not in REPOS else None
+            elif deb is None:
                 deb = k
     print(f'individus suivis ({phase}) :', len(ind), '; par espèce :', dict(collections.Counter(o[0][1] for o in ind.values())))
-if figes: print('ECHEC : individus figés plus de 15 s (phase, espèce, id, durée, actions) :', figes); ok = False
-else: print('aucun individu figé plus de 15 s (hors repos, repas, sommeil)')
+if figes: print('ECHEC : individus qui veulent se déplacer mais restent figés 10 s ou plus (phase, espèce, id, durée, actions) :', figes); ok = False
+else: print('aucun individu figé : aucun mob ne reste 10 s sans bouger alors qu\'il veut se déplacer (errer, rejoindre, rentrer, fuir, marcher...)')
 mv = re.search(r'(\d\d:\d\d:\d\d) == ANTOINE (\S+)', cmds)
 if mv:
     place = mv.group(2)
