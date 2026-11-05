@@ -42,7 +42,7 @@ public final class Vol {
         this.altMin = altMin;
         this.altMax = Math.max(altMin, altMax);
         this.x = x; this.y = y; this.z = z;
-        this.duree = papillon ? 2 + hasard.nextDouble() * 4 : 6 + hasard.nextDouble() * 20;
+        this.duree = papillon ? 2 + hasard.nextDouble() * 4 : 2 + hasard.nextDouble() * 8;
         this.phase = hasard.nextDouble() * Math.PI * 2;
     }
 
@@ -62,7 +62,7 @@ public final class Vol {
     /** Fait trottiner l'oiseau au sol quand il est posé (blocs par seconde) ; il reste alors posé plus longtemps. */
     public Vol marcheur(double vitesse) {
         vitesseMarche = Math.max(0, vitesse);
-        if (vitesseMarche > 0 && etat == Etat.POSE && temps > 0) duree = Math.max(duree, 20 + hasard.nextDouble() * 40);
+        if (vitesseMarche > 0 && etat == Etat.POSE) duree = Math.max(duree, 20 + hasard.nextDouble() * 40);
         attente = 0.5 + hasard.nextDouble() * 2;
         return this;
     }
@@ -143,7 +143,7 @@ public final class Vol {
                     vx = vy = vz = 0;
                     etat = Etat.POSE;
                     temps = 0;
-                    duree = papillon ? 2 + hasard.nextDouble() * 6 : vitesseMarche > 0 ? 20 + hasard.nextDouble() * 40 : 8 + hasard.nextDouble() * 30;
+                    duree = papillon ? 2 + hasard.nextDouble() * 6 : vitesseMarche > 0 ? 20 + hasard.nextDouble() * 40 : 4 + hasard.nextDouble() * 10;
                     attente = 1 + hasard.nextDouble() * 2;
                     return;
                 }
@@ -186,8 +186,6 @@ public final class Vol {
                 attente = 1 + hasard.nextDouble() * 2;
                 // perché là où il ne peut pas marcher : il s'envole ailleurs au bout de quelques secondes
                 if (++rates >= 2) duree = Math.min(duree, temps + 1 + hasard.nextDouble() * 3);
-            } else {
-                rates = 0;
             }
             return;
         }
@@ -195,7 +193,12 @@ public final class Vol {
         if (n < 0.08) { marche = false; attente = 0.6 + hasard.nextDouble() * 2.2; return; }
         double pas = Math.min(n, vitesseMarche * dt);
         double nx = x + dx / n * pas, nz = z + dz / n * pas;
-        if (!plat(sol, nx, nz)) { marche = false; attente = 0.8; return; }
+        if (!plat(sol, nx, nz)) {
+            marche = false; attente = 0.8;
+            if (++rates >= 3) duree = Math.min(duree, temps + 1 + hasard.nextDouble() * 3);
+            return;
+        }
+        rates = 0;
         x = nx; z = nz; y = sol.hauteur(nx, nz);
         parcouru += pas;
         yaw = Math.toDegrees(Math.atan2(-dx, dz));

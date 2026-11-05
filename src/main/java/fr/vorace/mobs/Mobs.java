@@ -188,6 +188,8 @@ public final class Mobs {
         boolean actif;
         /** Distance parcourue (au sol ou en vol) depuis son apparition, et dernière position vue. */
         double parcouru, dernierPas;
+        /** Pensées d'affilée sans un pas alors qu'il veut se déplacer. */
+        int bloque;
         double avantX = Double.NaN, avantZ;
 
         Suivi(Entity e, DefinitionMob d) {
@@ -677,6 +679,29 @@ public final class Mobs {
             if (action == Action.FUIR && s.troupeau != null) {
                 for (Suivi o : groupe) if (o != s && o.e.getLocation().distanceSquared(l) < 256) o.c.effrayer(s.c.peur() * 0.8);
             }
+        }
+        // coincé (aucun pas depuis 3 s alors qu'il veut aller quelque part : clôture, pente, recoin) : il part au hasard
+        // quelques blocs plus loin, puis reprend son action
+        boolean enRoute = switch (action) {
+            case ERRER, REJOINDRE, RENTRER, FUIR -> true;
+            case MANGER -> s.nourriture != null && s.nourriture.distanceSquared(l) >= 2.6;
+            case BOIRE -> s.eau != null && s.eau.distanceSquared(l) >= 2.6;
+            default -> false;
+        };
+        s.bloque = enRoute && s.dernierPas < 0.05 ? s.bloque + 1 : 0;
+        if (s.bloque >= 6) {
+            s.bloque = 0;
+            World w = l.getWorld();
+            for (int k = 0; k < 10; k++) {
+                double a = hasard.nextDouble() * Math.PI * 2, r = 3 + hasard.nextDouble() * 5;
+                Location c = sol(w, l.getX() + Math.cos(a) * r, l.getY(), l.getZ() + Math.sin(a) * r, false);
+                if (c != null && Math.abs(c.getY() - l.getY()) <= 2 && mob.getPathfinder().moveTo(c, s.d.vitesse())) {
+                    s.prochainPlan = tic + 50;
+                    s.cible = c;
+                    break;
+                }
+            }
+            return;
         }
         agir(s, mob, modele, action, menace, centre, l);
     }
