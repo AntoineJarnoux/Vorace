@@ -42,7 +42,7 @@ golem_paisible:
 lapin_essai:
   type: rabbit
   caractere: craintif
-  detection: 24
+  detection: 40
   laisse: 10
 oiseau_essai:
   type: bat
@@ -60,12 +60,12 @@ cochon_essai:
 poule_essai:
   type: chicken
   caractere: craintif
-  detection: 24
+  detection: 40
   laisse: 10
 chat_essai:
   type: cat
   caractere: craintif
-  detection: 24
+  detection: 40
   laisse: 10
 chevre_essai:
   type: goat
@@ -83,7 +83,7 @@ pigeon_essai:
 lapin_createf:
   type: rabbit
   caractere: craintif
-  detection: 24
+  detection: 40
   laisse: 10
 MOBS
 # zoo : un mob de chaque sorte réglé comme les animaux d'Orario (sans leurs modèles), pour vérifier qu'ils bougent tout seuls
