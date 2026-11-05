@@ -1,7 +1,10 @@
 #!/bin/bash
-# Essai sur la vraie map d'Orario (CI) : serveur Paper 1.21.4 avec le monde et les animaux d'Orario, un faux joueur en
-# créatif emmené sur une place à pigeons, près d'un bain d'oiseaux, dans un pré et dans un jardin ; relevé des mobs
-# toutes les 5 s ; redémarrage du serveur puis nouveau relevé (les animaux reprennent leur cerveau).
+# Essai sur la vraie map d'Orario (CI) : serveur Paper 1.21.4 avec le monde et les animaux d'Orario (extrait : quelques
+# fichiers de région), un faux joueur en CRÉATIF emmené :
+#   - sur deux places à pigeons (vus de 12 blocs, puis le joueur arrive à 1,5 bloc d'un pigeon posé : la volée part) ;
+#   - près d'un bain d'oiseaux (de loin : présents ; à 1,5 bloc : partis ; relevé toutes les 2 s après son départ) ;
+#   - près d'un point d'apparition de CHAQUE espèce présente dans l'extrait (relevé toutes les 4 s) ;
+# puis le serveur est arrêté et redémarré, et on relève de nouveau plusieurs espèces (les animaux reprennent leur cerveau).
 # Usage : outils/essai-orario.sh <zip du serveur Orario> <dossier contenant Vorace-*.jar>
 set -uo pipefail
 ZIP=$(cd "$(dirname "$1")" && echo "$PWD/$(basename "$1")")
@@ -19,32 +22,35 @@ cat > server.properties <<PROPS
 online-mode=false
 level-name=Orario
 spawn-protection=0
-view-distance=6
-simulation-distance=6
+view-distance=5
+simulation-distance=5
 spawn-monsters=false
 PROPS
+# lieux : deux places à pigeons, un bain d'oiseaux, puis pour chaque espèce son point le plus peuplé (loin du bord de l'extrait)
 python3 - <<'PY' > lieux.txt
-import yaml, glob
+import yaml, glob, os
 ap = {}
 for f in glob.glob('plugins/Vorace/apparitions/*.yml'):
     ap.update(yaml.safe_load(open(f)) or {})
-import os
-def dedans(c):  # loin du bord des fichiers de région fournis (le reste du monde n'est pas dans le zip d'essai)
+def dedans(c):
     rx, rz = int(c[0] // 512), int(c[2] // 512)
-    return os.path.exists(f'Orario/region/r.{rx}.{rz}.mca') and 96 <= c[0] % 512 <= 416 and 96 <= c[2] % 512 <= 416
-def premier(prefixe, mini=1):
-    for k, v in sorted(ap.items()):
-        if k.startswith(prefixe) and v.get('nombre', 1) >= mini and dedans(v['centre']):
-            c = v['centre']; return k, v['mob'], c, v.get('nombre', 1)
-for nom, (pre, mini) in {'PIGEONS': ('pigeons_place_', 4), 'BAIN': ('bain_oiseaux_', 1), 'PRE': ('mouton_', 2), 'VACHES': ('vache_', 3),
-                         'JARDIN': ('chat_jardin_', 1), 'FORET': ('cerf_', 2)}.items():
-    r = premier(pre, mini)
-    if r:
-        k, mob, c, n = r
-        print(f'{nom} {k} {mob} {c[0]:.1f} {c[1]:.1f} {c[2]:.1f} {n}')
+    return os.path.exists(f'Orario/region/r.{rx}.{rz}.mca') and 48 <= c[0] % 512 <= 464 and 48 <= c[2] % 512 <= 464
+ok = {k: v for k, v in ap.items() if dedans(v['centre'])}
+def ligne(nom, k):
+    v = ok[k]; c = v['centre']
+    print(f"{nom} {k} {v['mob']} {c[0]:.1f} {c[1]:.1f} {c[2]:.1f} {v.get('nombre', 1)}")
+places = sorted((k for k in ok if k.startswith('pigeons_place_') and ok[k].get('nombre', 1) >= 4), key=lambda k: -ok[k]['nombre'])
+for i, k in enumerate(places[:2]):
+    ligne(f'PIGEONS{i + 1}', k)
+bains = sorted(k for k in ok if ok[k]['mob'] == 'bain_oiseaux')
+if bains:
+    ligne('BAIN', bains[0])
+especes = sorted({v['mob'] for v in ok.values()} - {'bain_oiseaux'})
+for m in especes:
+    k = max((k for k in ok if ok[k]['mob'] == m), key=lambda k: (ok[k].get('nombre', 1), k))
+    ligne('ESPECE', k)
 PY
 cat lieux.txt
-lieu() { grep "^$1 " lieux.txt | head -1; }
 rm -f console && mkfifo console
 exec 3<>console
 demarrer() {
@@ -55,142 +61,158 @@ demarrer() {
   for _ in $(seq 1 400); do [ "$(grep -c 'Done (' journal.txt 2>/dev/null || true)" -gt "${avant:-0}" ] && break; sleep 1; done
 }
 cmd() { echo "$(date -u +%T) >>> $1" >> commandes.txt; echo "$1" >&3; }
+note() { echo "$(date -u +%T) == $1" >> commandes.txt; }
 releve() { # releve <début du nom> <fois> <écart>
   for _ in $(seq 1 "$2"); do cmd "vorace mob info $1 Testeur"; sleep "$3"; done
 }
-aller() { # aller <x> <y> <z> : téléporte le faux joueur
-  cmd "tp Testeur $1 $2 $3"
+aller() { cmd "tp Testeur $1 $2 $3"; }
+plus() { python3 -c "print(round($1 + $2, 1))"; }
+connecter() { # connecter <fichier> <durée en s>
+  node "$OUTILS/essai-orario-bot.mjs" "$2" > "$1" 2>&1 &
+  BOT=$!
+  for _ in $(seq 1 60); do grep -q 'BOT CONNECTE' "$1" && break; sleep 1; done
+  cmd "gamemode creative Testeur"
+  cmd "time set 1000"
+  cmd "gamerule doDaylightCycle false"
 }
-: > journal.txt
-demarrer
-node "$OUTILS/essai-orario-bot.mjs" 330 > bot.txt 2>&1 &
-BOT=$!
-for _ in $(seq 1 60); do grep -q 'BOT CONNECTE' bot.txt && break; sleep 1; done
-cmd "gamemode creative Testeur"
-cmd "time set 1000"
-cmd "gamerule doDaylightCycle false"
-# 1. place à pigeons : vus de 12 blocs (marche, picore), puis le joueur arrive au milieu (envol de la volée)
-read -r _ ID MOB X Y Z N <<< "$(lieu PIGEONS)"
-echo "$(date -u +%T) == PIGEONS $ID ($N pigeons) à $X $Z" >> commandes.txt
-aller "$(python3 -c "print($X + 12)")" "$(python3 -c "print($Y + 2)")" "$Z"
-sleep 25
-releve pigeon 5 5
-# le joueur arrive à 1,5 bloc d'un pigeon posé de cette place : lui et ses voisins (moins de 8 blocs) doivent s'envoler
-releve pigeon 1 1
-CIBLE=$(python3 - "$ID" <<'PY'
+pigeon_vise() { # position (x+1.5, y+1, z) d'un pigeon posé de la place $1, lue dans le relevé qui vient d'être fait
+  python3 - "$1" <<'PY'
 import re, sys
 t = open('journal.txt', errors='replace').read()
-dernier = t.split('mob(s) de Vorace charg')[-1]          # le relevé qui vient d'être fait
+dernier = t.split('mob(s) de Vorace charg')[-1]
 p = [m.groups() for m in re.finditer(r'mob=pigeon action=(marche|picore|pose) .*?apparition=' + re.escape(sys.argv[1]) + r' .*?pos=([-0-9.]+),([-0-9.]+),([-0-9.]+)', dernier)]
 if p:
     a, x, y, z = p[0]
     print(float(x) + 1.5, float(y) + 1, z)
 PY
-)
-[ -n "$CIBLE" ] || CIBLE="$X $(python3 -c "print($Y + 1)") $Z"
-echo "$(date -u +%T) == pigeon visé : $CIBLE" >> commandes.txt
-aller $CIBLE
-sleep 1
-releve pigeon 3 1
-aller "$(python3 -c "print($X + 40)")" "$(python3 -c "print($Y + 2)")" "$Z"
-sleep 25
-releve pigeon 2 4
-# 2. bain d'oiseaux : présents vus de loin, partis quand on s'approche, revenus 15 s après le départ du joueur
-read -r _ ID MOB X Y Z N <<< "$(lieu BAIN)"
-echo "$(date -u +%T) == BAIN $ID à $X $Z" >> commandes.txt
-aller "$(python3 -c "print($X + 9)")" "$(python3 -c "print($Y + 2)")" "$Z"
+}
+
+: > journal.txt
+demarrer
+connecter bot.txt 3000
+
+# 1. deux places à pigeons
+for P in PIGEONS1 PIGEONS2; do
+  read -r _ ID MOB X Y Z N <<< "$(grep "^$P " lieux.txt)" || continue
+  [ -n "${ID:-}" ] || continue
+  note "$P $ID ($N pigeons) à $X $Z"
+  aller "$(plus "$X" 12)" "$(plus "$Y" 2)" "$Z"
+  sleep 20
+  releve pigeon 4 5
+  releve pigeon 1 1
+  CIBLE=$(pigeon_vise "$ID")
+  [ -n "$CIBLE" ] || CIBLE="$X $(plus "$Y" 1) $Z"
+  note "pigeon visé ($ID) : $CIBLE"
+  aller $CIBLE
+  sleep 1
+  releve pigeon 3 1
+  aller "$(plus "$X" 40)" "$(plus "$Y" 2)" "$Z"
+  sleep 4
+done
+
+# 2. bain d'oiseaux : présents de loin, partis à 1,5 bloc, relevé toutes les 2 s après le départ du joueur
+read -r _ ID MOB X Y Z N <<< "$(grep '^BAIN ' lieux.txt)"
+note "BAIN $ID à $X $Z"
+aller "$(plus "$X" 9)" "$(plus "$Y" 2)" "$Z"
 sleep 15
 releve bain 2 3
-aller "$(python3 -c "print($X + 1.5)")" "$(python3 -c "print($Y + 1)")" "$Z"
+aller "$(plus "$X" 1.5)" "$(plus "$Y" 1)" "$Z"
 sleep 2
 releve bain 2 2
-aller "$(python3 -c "print($X + 12)")" "$(python3 -c "print($Y + 2)")" "$Z"
-sleep 24
-releve bain 3 3
-# 3. pré (moutons), vaches, jardin (chat), forêt (cerfs) : 40 s chacun, relevé toutes les 5 s
-for L in PRE VACHES JARDIN FORET; do
-  read -r _ ID MOB X Y Z N <<< "$(lieu $L)" || continue
-  [ -n "${ID:-}" ] || continue
-  echo "$(date -u +%T) == $L $ID ($N) à $X $Z" >> commandes.txt
-  aller "$(python3 -c "print($X + 14)")" "$(python3 -c "print($Y + 3)")" "$Z"
-  sleep 15
-  releve "$MOB" 6 5
-done
-wait $BOT
+aller "$(plus "$X" 12)" "$(plus "$Y" 2)" "$Z"
+note "BAIN joueur reparti"
+releve bain 14 2
+
+# 3. chaque espèce : le joueur à 10 blocs, 12 s pour l'apparition, puis 5 relevés toutes les 4 s
+while read -r QUOI ID MOB X Y Z N; do
+  [ "$QUOI" = ESPECE ] || continue
+  note "ESPECE $MOB $ID ($N) à $X $Y $Z"
+  aller "$(plus "$X" 10)" "$(plus "$Y" 3)" "$Z"
+  sleep 12
+  releve "$MOB" 5 4
+done < lieux.txt
+kill $BOT 2>/dev/null; sleep 2
+
 # 4. redémarrage : les animaux enregistrés dans le monde reprennent leur cerveau
 cmd "stop"
 for _ in $(seq 1 90); do kill -0 $SERVEUR 2>/dev/null || break; sleep 1; done
 echo "===== REDEMARRAGE" >> journal.txt
+note "REDEMARRAGE"
 demarrer
-node "$OUTILS/essai-orario-bot.mjs" 70 > bot2.txt 2>&1 &
-BOT=$!
-for _ in $(seq 1 60); do grep -q 'BOT CONNECTE' bot2.txt && break; sleep 1; done
-cmd "gamemode creative Testeur"
-read -r _ ID MOB X Y Z N <<< "$(lieu PRE)"
-echo "$(date -u +%T) == APRES REDEMARRAGE $ID à $X $Z" >> commandes.txt
-aller "$(python3 -c "print($X + 14)")" "$(python3 -c "print($Y + 3)")" "$Z"
-sleep 15
-releve "$MOB" 6 5
-wait $BOT
+connecter bot2.txt 600
+for M in mouton vache cerf chat_ville pigeon papillons lapin; do
+  read -r _ ID MOB X Y Z N <<< "$(grep "^ESPECE [^ ]* $M " lieux.txt | head -1)" || continue
+  [ -n "${ID:-}" ] || continue
+  note "APRES REDEMARRAGE $MOB $ID à $X $Z"
+  aller "$(plus "$X" 10)" "$(plus "$Y" 3)" "$Z"
+  sleep 12
+  releve "$MOB" 4 4
+done
+kill $BOT 2>/dev/null
 cmd "stop"
 for _ in $(seq 1 90); do kill -0 $SERVEUR 2>/dev/null || break; sleep 1; done
 
-echo "===== Faux joueur"; cat bot.txt bot2.txt
+echo "===== Faux joueur"; cat bot.txt bot2.txt | grep -v '^\s*at \|^Error:' | head -40
 echo "===== Commandes"; cat commandes.txt
 echo "===== Mobs (console)"; grep -aE 'mob=|[0-9]+ mob\(s\)|REDEMARRAGE|Aucun mob' journal.txt
-echo "===== Mobs (messages reçus par le joueur)"; grep -ahE 'mob=|[0-9]+ mob\(s\)|Aucun mob' bot.txt bot2.txt
 echo "===== Erreurs"; grep -aiE 'exception|at fr\.vorace|Mobs : erreur' journal.txt | head -20
 echo "===== Bilan"
 python3 - <<'PY'
 import re, collections
 j = open('journal.txt', errors='replace').read().split('===== REDEMARRAGE')
-b1 = open('bot.txt', errors='replace').read(); b2 = open('bot2.txt', errors='replace').read() if __import__('os').path.exists('bot2.txt') else ''
-lignes = [j[0] + b1, (j[1] if len(j) > 1 else '') + b2]
-if not lignes[1].strip(): lignes = lignes[:1]
-def lire(t):
-    res = collections.defaultdict(list)
-    for m in re.finditer(r'mob=(\S+) action=(\S+) .*?parcouru=([0-9.]+)', t):
-        res[m.group(1)].append((m.group(2), float(m.group(3))))
+lignes = [j[0], j[1] if len(j) > 1 else '']
+cmds = open('commandes.txt').read()
+def secs(h):
+    a, b, c = map(int, h.split(':')); return a * 3600 + b * 60 + c
+def relevés(t):
+    """[(heure, [(mob, action, parcouru, apparition, pos)])] pour chaque relevé"""
+    res = []
+    for bloc in re.split(r'(?=\[\d\d:\d\d:\d\d INFO\]: Vorace » \d+ mob\(s\) de Vorace charg)', t):
+        m = re.match(r'\[(\d\d:\d\d:\d\d)', bloc)
+        if not m: continue
+        res.append((m.group(1), re.findall(r'mob=(\S+) action=(\S+) .*?apparition=(\S+) parcouru=([0-9.]+)', bloc)))
     return res
-avant = lire(lignes[0]); apres = lire(lignes[1]) if len(lignes) > 1 else {}
-print('mob : actions vues ; distance la plus longue parcourue par un individu')
-places = collections.Counter()
-for bloc in lignes[0].split('mob(s) de Vorace charg'):
-    c = collections.Counter(m.group(1) for m in re.finditer(r'mob=pigeon .*?apparition=(\S+)', bloc))
-    for k, n in c.items(): places[k] = max(places[k], n)
-print('pigeons vus en même temps, par point d\'apparition :', dict(sorted(places.items())))
+def resume(t):
+    r = collections.defaultdict(list)
+    for _, lst in relevés(t):
+        for mob, act, app, d in lst: r[mob].append((act, float(d)))
+    return r
+avant, apres = resume(lignes[0]), resume(lignes[1])
+ok = True
+print('espèce : actions vues ; plus longue distance parcourue par un individu ; nombre de relevés')
 for k, v in sorted(avant.items()):
-    print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):40s} {max(d for _, d in v):6.1f} blocs  ({len(v)} relevés)')
+    print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):44s} {max(d for _, d in v):6.1f} blocs  ({len(v)})')
 print('après redémarrage :')
 for k, v in sorted(apres.items()):
-    print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):40s} {max(d for _, d in v):6.1f} blocs  ({len(v)} relevés)')
-ok = True
-pig = avant.get('pigeon', [])
-if not any(a in ('marche', 'picore') for a, _ in pig): print('ECHEC : pigeons ni en marche ni en train de picorer'); ok = False
-if not pig or max(d for _, d in pig) < 2: print('ECHEC : pigeons immobiles'); ok = False
-if sum(1 for a, _ in pig if a == 'vole') < 3: print('ECHEC : la volée ne part pas quand le joueur arrive'); ok = False
-cmds = open('commandes.txt').read()
-mv = re.search(r'(\d\d:\d\d:\d\d) == pigeon visé', cmds)
-if mv:
-    lig = lignes[0]
-    # relevés de la place dans les 4 s qui suivent l'arrivée à côté du pigeon
-    h0 = sum(int(x) * k for x, k in zip(mv.group(1).split(':'), (3600, 60, 1)))
-    vols = []
-    for bloc in re.split(r'(?=\[\d\d:\d\d:\d\d INFO\]: Vorace » \d+ mob)', lig):
-        m = re.match(r'\[(\d\d):(\d\d):(\d\d)', bloc)
-        if not m: continue
-        h = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
-        if 0 <= h - h0 <= 5:
-            acts = re.findall(r'mob=pigeon action=(\S+) [^\n]*?apparition=' + re.escape(open('lieux.txt').read().split()[1]) + ' ', bloc)
-            vols.append((m.group(0)[1:], acts.count('vole'), len(acts)))
-    print('volée : pigeons de la place en vol juste après l\'arrivée du joueur :', vols)
-    if not any(v >= 2 for _, v, _ in vols): print('ECHEC : la volée ne part pas à l\'approche'); ok = False
-bain = [a for a, _ in avant.get('bain_oiseaux', [])]
-if 'partis' not in bain or bain[-1] != 'presents': print('ECHEC : les oiseaux du bain ne partent pas ou ne reviennent pas'); ok = False
-for k in ('mouton', 'vache'):
-    if k in avant and max(d for _, d in avant[k]) < 2: print(f'ECHEC : {k} immobile'); ok = False
-if apres and max(d for v in apres.values() for _, d in v) < 2: print('ECHEC : immobiles après redémarrage'); ok = False
+    print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):44s} {max(d for _, d in v):6.1f} blocs  ({len(v)})')
+attendues = [l.split()[2] for l in open('lieux.txt') if l.startswith('ESPECE ')]
+manquent = [m for m in attendues if m not in avant]
+if manquent: print('ECHEC : espèces jamais relevées :', manquent); ok = False
+immobiles = [m for m in attendues if m in avant and max(d for _, d in avant[m]) < 2]
+if immobiles: print('ECHEC : espèces immobiles (moins de 2 blocs) :', immobiles); ok = False
 if not apres: print('ECHEC : aucun mob relevé après le redémarrage'); ok = False
+elif max(d for v in apres.values() for _, d in v) < 2: print('ECHEC : immobiles après redémarrage'); ok = False
+# pigeons : nombre par place, volée à l'approche
+places = collections.Counter()
+for _, lst in relevés(lignes[0]):
+    c = collections.Counter(app for mob, _, app, _ in lst if mob == 'pigeon')
+    for k, n in c.items(): places[k] = max(places[k], n)
+print('pigeons vus en même temps, par place :', {k: v for k, v in sorted(places.items()) if k.startswith('pigeons_place')})
+for mv in re.finditer(r'(\d\d:\d\d:\d\d) == pigeon visé \((\S+)\)', cmds):
+    h0, place = secs(mv.group(1)), mv.group(2)
+    vols = [(h, sum(1 for mob, a, app, _ in lst if app == place and a == 'vole'), sum(1 for mob, a, app, _ in lst if app == place))
+            for h, lst in relevés(lignes[0]) if 0 <= secs(h) - h0 <= 5]
+    print(f'volée ({place}) : pigeons en vol / relevés juste après l\'arrivée du joueur :', vols)
+    if not any(v >= 2 for _, v, _ in vols): print('ECHEC : la volée ne part pas à l\'approche'); ok = False
+# bain : présents, partis, retour
+mb = re.search(r'(\d\d:\d\d:\d\d) == BAIN joueur reparti', cmds)
+etats = [(h, a) for h, lst in relevés(lignes[0]) for mob, a, _, _ in lst if mob == 'bain_oiseaux']
+print('bain d\'oiseaux :', etats)
+if mb:
+    h0 = secs(mb.group(1))
+    retour = [secs(h) - h0 for h, a in etats if secs(h) >= h0 and a == 'presents']
+    print('bain : retour des oiseaux', (f'{retour[0]} s après le départ du joueur' if retour else 'jamais'))
+    if 'partis' not in [a for _, a in etats] or not retour: print('ECHEC : les oiseaux du bain ne partent pas ou ne reviennent pas'); ok = False
 print('ESSAI ORARIO OK' if ok else 'ESSAI ORARIO EN ECHEC')
 raise SystemExit(0 if ok else 1)
 PY

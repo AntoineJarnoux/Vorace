@@ -645,7 +645,7 @@ public final class Mobs {
 
         boolean faimProche = s.c.faim() > 0.3 || s.c.action() == Action.MANGER;
         if (faimProche && !s.d.nourriture().isEmpty() && (s.nourriture == null || tic >= s.rechercheNourriture)) {
-            s.nourriture = chercherNourriture(s);
+            s.nourriture = chercherNourriture(s, centre);
             s.rechercheNourriture = tic + (s.nourriture == null ? 200 : 600);
         }
         boolean soifProche = s.d.boit() && (s.c.soif() > 0.3 || s.c.action() == Action.BOIRE);
@@ -864,17 +864,27 @@ public final class Mobs {
         s.boucle = null;
     }
 
-    /** Bloc ou plante comestible à portée (dans la laisse), ou point « nourriture » de la zone. */
-    private Location chercherNourriture(Suivi s) {
+    /**
+     * Bloc ou plante comestible à portée (dans la laisse), ou point « nourriture » de la zone. Un mob en troupeau broute
+     * près du troupeau : sinon il partait manger loin, revenait le rejoindre, repartait... (va-et-vient en courant).
+     */
+    private Location chercherNourriture(Suivi s, double[] centre) {
         Location l = s.e.getLocation();
+        double cx = l.getX(), cz = l.getZ(), rayon = 6, maxCentre = Double.MAX_VALUE;
+        if (centre != null && s.d.cohesion() > 0) {
+            cx = centre[0]; cz = centre[1];
+            rayon = Math.max(2, s.d.cohesion() * 0.5);
+            maxCentre = s.d.cohesion() * 0.8;
+        }
         World w = l.getWorld();
         if (s.d.nourriture().contains("zone") && s.zone != null) {
             Zone.Point p = s.zone.plusProche("nourriture", l.getX(), l.getZ());
             if (p != null && Geometrie.distance(p.x(), p.z(), s.mx, s.mz) <= s.laisse + 4) return new Location(w, p.x(), p.y(), p.z());
         }
         for (int essai = 0; essai < 28; essai++) {
-            double x = l.getX() + hasard.nextGaussian() * 6, z = l.getZ() + hasard.nextGaussian() * 6;
+            double x = cx + hasard.nextGaussian() * rayon, z = cz + hasard.nextGaussian() * rayon;
             if (Geometrie.distance(x, z, s.mx, s.mz) > s.laisse) continue;
+            if (Geometrie.distance(x, z, cx, cz) > maxCentre) continue;
             if (s.zone != null && !s.zone.contient(x, z)) continue;
             Location g = sol(w, x, l.getY(), z, false);
             if (g == null) continue;
