@@ -423,7 +423,7 @@ en plus simple. Ensuite viendra VoraceMMO (mobs et compétences, objets RPG, pro
 9. ✅ **1.0** : tout se fait avec des menus (`/vorace`), aux couleurs de Vorace
 10. ✅ **1.1** : modèles animés plus fluides et moins coûteux (portée d'affichage, fondus, couches, tête qui suit le
     regard, textures animées, teinte des dégâts, clés d'effet, Molang) et mobs avec un cerveau (besoins, troupeaux,
-    laisse, zones, horaires, points d'apparition)
+    laisse, zones, horaires, points d'apparition) : détail dans [CHANGELOG.md](CHANGELOG.md)
 
 ## Licence
 
