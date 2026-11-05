@@ -565,10 +565,10 @@ public final class Mobs {
             double dj = Math.sqrt(dd[0]);
             if (dj < env * (proche.isSneaking() ? 0.5 : 1) && !s.vol.enVol()) {
                 s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), l.getY()), s.mx, s.mz, s.laisse);
-                // la volée part ensemble : les oiseaux de la même espèce posés à moins de 8 blocs s'envolent aussi
+                // la volée part ensemble : les oiseaux de la même espèce posés à moins de 12 blocs s'envolent aussi
                 for (Suivi o : suivis.values()) {
                     if (o != s && o.vol != null && o.d == s.d && !o.vol.enVol() && o.e.getWorld().equals(e.getWorld())
-                        && o.e.getLocation().distanceSquared(l) < 64) {
+                        && o.e.getLocation().distanceSquared(l) < 144) {
                         o.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), o.e.getLocation().getY()), o.mx, o.mz, o.laisse);
                         o.actif = true;
                     }
