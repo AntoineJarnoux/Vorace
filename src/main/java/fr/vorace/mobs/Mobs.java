@@ -329,7 +329,7 @@ public final class Mobs {
         if (par != null) s.menace = par;
         if (s.vol != null) {
             Location m = par != null ? par.getLocation() : e.getLocation();
-            s.vol.effrayer(m.getX(), m.getZ(), sol(e.getWorld()), s.mx, s.mz, s.laisse);
+            s.vol.effrayer(m.getX(), m.getZ(), sol(e.getWorld(), e.getLocation().getY()), s.mx, s.mz, s.laisse);
         }
         if (s.troupeau != null && s.c.peur() > 0.5) {
             for (Suivi o : troupeaux.getOrDefault(s.troupeau, List.of())) {
@@ -563,12 +563,12 @@ public final class Mobs {
             Location pl = proche.getLocation();
             double dj = Math.sqrt(dd[0]);
             if (dj < env * (proche.isSneaking() ? 0.5 : 1) && !s.vol.enVol()) {
-                s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld()), s.mx, s.mz, s.laisse);
+                s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), l.getY()), s.mx, s.mz, s.laisse);
                 // la volée part ensemble : les oiseaux de la même espèce posés à moins de 8 blocs s'envolent aussi
                 for (Suivi o : suivis.values()) {
                     if (o != s && o.vol != null && o.d == s.d && !o.vol.enVol() && o.e.getWorld().equals(e.getWorld())
                         && o.e.getLocation().distanceSquared(l) < 64) {
-                        o.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld()), o.mx, o.mz, o.laisse);
+                        o.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), o.e.getLocation().getY()), o.mx, o.mz, o.laisse);
                         o.actif = true;
                     }
                 }
@@ -719,13 +719,27 @@ public final class Mobs {
     }
 
     /** Hauteur du sol pour les volants : dessus du bloc le plus haut (toit, branche), pas sur l'eau. */
-    static Vol.Sol sol(World w) {
+    static Vol.Sol sol(World w, double yRef) {
+        // les cartes fermées par un plafond de barrières (Orario : y 703) : le sol se cherche en descendant depuis un peu
+        // au-dessus de l'oiseau, en sautant les barrières et ce qui ne porte pas (herbes, fleurs)
+        int haut = Math.min(w.getMaxHeight() - 1, (int) Math.floor(yRef) + 40);
+        int bas = Math.max(w.getMinHeight(), (int) Math.floor(yRef) - 64);
         return (x, z) -> {
             int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
             if (!w.isChunkLoaded(bx >> 4, bz >> 4)) return Double.NaN;
-            Block b = w.getHighestBlockAt(bx, bz);
-            if (b.isLiquid()) return Double.NaN;
-            return b.getY() + 1;
+            int y = w.getHighestBlockYAt(bx, bz);
+            if (y <= haut) {
+                Block b = w.getBlockAt(bx, y, bz);
+                if (b.getType() != Material.BARRIER) return b.isLiquid() ? Double.NaN : y + 1;
+            }
+            for (int yy = Math.min(y, haut); yy >= bas; yy--) {
+                Block b = w.getBlockAt(bx, yy, bz);
+                if (b.isLiquid()) return Double.NaN;
+                Material m = b.getType();
+                if (m.isAir() || m == Material.BARRIER || !m.isSolid()) continue;
+                return yy + 1;
+            }
+            return Double.NaN;
         };
     }
 
@@ -734,7 +748,7 @@ public final class Mobs {
         Entity e = s.e;
         Vol v = s.vol;
         double x0 = v.x(), y0 = v.y(), z0 = v.z();
-        v.pas(0.05, sol(e.getWorld()), s.mx, s.mz, s.laisse);
+        v.pas(0.05, sol(e.getWorld(), v.y()), s.mx, s.mz, s.laisse);
         if (Math.abs(v.x() - x0) + Math.abs(v.y() - y0) + Math.abs(v.z() - z0) < 1e-4) return;
         Location l = new Location(e.getWorld(), v.x(), v.y(), v.z(), v.yaw(), 0);
         e.teleport(l);

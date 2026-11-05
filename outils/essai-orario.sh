@@ -140,6 +140,11 @@ def lire(t):
     return res
 avant = lire(lignes[0]); apres = lire(lignes[1]) if len(lignes) > 1 else {}
 print('mob : actions vues ; distance la plus longue parcourue par un individu')
+places = collections.Counter()
+for bloc in lignes[0].split('mob(s) de Vorace charg'):
+    c = collections.Counter(m.group(1) for m in re.finditer(r'mob=pigeon .*?apparition=(\S+)', bloc))
+    for k, n in c.items(): places[k] = max(places[k], n)
+print('pigeons vus en même temps, par point d\'apparition :', dict(sorted(places.items())))
 for k, v in sorted(avant.items()):
     print(f'  {k:14s} {", ".join(sorted(set(a for a, _ in v))):40s} {max(d for _, d in v):6.1f} blocs  ({len(v)} relevés)')
 print('après redémarrage :')
@@ -148,6 +153,7 @@ for k, v in sorted(apres.items()):
 ok = True
 pig = avant.get('pigeon', [])
 if not any(a in ('marche', 'picore') for a, _ in pig): print('ECHEC : pigeons ni en marche ni en train de picorer'); ok = False
+if not pig or max(d for _, d in pig) < 2: print('ECHEC : pigeons immobiles'); ok = False
 if sum(1 for a, _ in pig if a == 'vole') < 3: print('ECHEC : la volée ne part pas quand le joueur arrive'); ok = False
 bain = [a for a, _ in avant.get('bain_oiseaux', [])]
 if 'partis' not in bain or bain[-1] != 'presents': print('ECHEC : les oiseaux du bain ne partent pas ou ne reviennent pas'); ok = False
