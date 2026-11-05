@@ -238,7 +238,10 @@ mouton:
   Les papillons volettent bas en zigzag. Animation de vol : rôle `vol` (par exemple `animations: { vol: fly }`).
   Avec `marche: 0.9` (blocs par seconde), un oiseau posé trottine au sol par petits pas sur du plat et s'arrête
   pour picorer (`ennui: [peck]`) : pigeons de place, moineaux. Son animation `walk` se joue toute seule. Quand un
-  joueur fait s'envoler un oiseau, ceux de la même espèce posés à moins de 12 blocs partent avec lui (volée).
+  joueur fait s'envoler un oiseau, ceux de la même espèce posés à moins de 12 blocs, et toute la bande du même point
+  d'apparition, partent avec lui (volée). Un oiseau perché là où il ne peut pas marcher repart au bout de quelques secondes.
+- **Mob coincé** : un mob qui veut se déplacer mais ne fait aucun pas pendant 3 s (clôture, pente, recoin) part quelques
+  blocs plus loin ; s'il n'a de chemin nulle part (né dans un trou), il est reposé sur un sol libre tout près.
 - **Décors vivants** (`type: decor`) : un modèle posé sans entité (bain d'oiseaux, nid, mangeoire), qui joue son
   `idle` en boucle et ses animations `ennui` de temps en temps. Avec `envol: 4` il joue `envol` quand un joueur
   approche (deux fois plus loin s'il court, deux fois moins s'il est accroupi) ; s'il a aussi une animation `retour`,

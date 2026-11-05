@@ -189,7 +189,7 @@ public final class Mobs {
         /** Distance parcourue (au sol ou en vol) depuis son apparition, et dernière position vue. */
         double parcouru, dernierPas;
         /** Pensées d'affilée sans un pas alors qu'il veut se déplacer. */
-        int bloque;
+        int bloque, coince;
         double avantX = Double.NaN, avantZ;
 
         Suivi(Entity e, DefinitionMob d) {
@@ -569,10 +569,12 @@ public final class Mobs {
             double dj = Math.sqrt(dd[0]);
             if (dj < env * (proche.isSneaking() ? 0.5 : 1) && s.vol.etat() != Vol.Etat.VOL) {
                 s.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), l.getY()), s.mx, s.mz, s.laisse);
-                // la volée part ensemble : les oiseaux de la même espèce posés à moins de 12 blocs s'envolent aussi
+                // la volée part ensemble : les oiseaux de la même espèce posés à moins de 12 blocs, et toute la bande du même
+                // point d'apparition (une place à pigeons), s'envolent aussi
                 for (Suivi o : suivis.values()) {
                     if (o != s && o.vol != null && o.d == s.d && o.vol.etat() != Vol.Etat.VOL && o.e.getWorld().equals(e.getWorld())
-                        && o.e.getLocation().distanceSquared(l) < 144) {
+                        && (o.e.getLocation().distanceSquared(l) < 144
+                            || (s.apparition != null && s.apparition.equals(o.apparition) && o.e.getLocation().distanceSquared(l) < 900))) {
                         o.vol.effrayer(pl.getX(), pl.getZ(), sol(e.getWorld(), o.e.getLocation().getY()), o.mx, o.mz, o.laisse);
                         o.actif = true;
                     }
@@ -692,14 +694,26 @@ public final class Mobs {
         if (s.bloque >= 6) {
             s.bloque = 0;
             World w = l.getWorld();
-            for (int k = 0; k < 10; k++) {
+            boolean parti = false;
+            Location repli = null;
+            for (int k = 0; k < 12 && !parti; k++) {
                 double a = hasard.nextDouble() * Math.PI * 2, r = 3 + hasard.nextDouble() * 5;
                 Location c = sol(w, l.getX() + Math.cos(a) * r, l.getY(), l.getZ() + Math.sin(a) * r, false);
-                if (c != null && Math.abs(c.getY() - l.getY()) <= 2 && mob.getPathfinder().moveTo(c, s.d.vitesse())) {
+                if (c == null || Math.abs(c.getY() - l.getY()) > 3) continue;
+                if (repli == null) repli = c;
+                if (mob.getPathfinder().moveTo(c, s.d.vitesse())) {
                     s.prochainPlan = tic + 50;
                     s.cible = c;
-                    break;
+                    parti = true;
                 }
+            }
+            // aucun chemin nulle part (né dans un trou, entre des troncs, derrière une clôture) : au bout de deux essais, on le
+            // pose sur un sol libre tout près plutôt que de le laisser figé
+            s.coince = parti ? 0 : s.coince + 1;
+            if (!parti && s.coince >= 2 && repli != null) {
+                mob.teleport(repli.add(0.5, 0, 0.5));
+                s.coince = 0;
+                s.avantX = Double.NaN;
             }
             return;
         }
