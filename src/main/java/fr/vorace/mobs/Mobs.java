@@ -202,7 +202,9 @@ public final class Mobs {
 
         public String etat() {
             Location l = e.getLocation();
-            String act = vol != null ? (vol.etat() == Vol.Etat.POSE ? (vol.marche() ? "marche" : "pose") : vol.etat() == Vol.Etat.VOL ? "vole" : "atterrit")
+            String act = vol != null ? (vol.etat() == Vol.Etat.POSE ? (vol.marche() ? "marche" : vol.marcheur() ? "picore" : "pose")
+                : vol.etat() == Vol.Etat.VOL ? "vole" : "atterrit")
+                : d.decor() ? (envolFin >= 0 ? "partis" : "presents")
                 : c.action().name().toLowerCase(Locale.ROOT);
             return String.format(Locale.ROOT, "mob=%s action=%s faim=%.2f soif=%.2f fatigue=%.2f peur=%.2f colere=%.2f maison=%.1f/%.0f%s%s",
                 d.id(), act, c.faim(), c.soif(), c.fatigue(), c.peur(), c.colere(),
@@ -684,7 +686,8 @@ public final class Mobs {
     private void penserDecor(Suivi s, Modeles.Instance modele, Player proche, double d2) {
         double env = s.d.envol();
         String retour = s.d.animation("retour");
-        boolean pres = proche != null && env > 0 && d2 < env * env * (proche.isSneaking() ? 0.25 : 1);
+        // accroupi : deux fois moins loin ; en courant : deux fois plus loin
+        boolean pres = proche != null && env > 0 && d2 < env * env * (proche.isSneaking() ? 0.25 : proche.isSprinting() ? 4 : 1);
         if (s.envolFin < 0) {
             if (pres) {
                 String an = s.d.animation("envol");

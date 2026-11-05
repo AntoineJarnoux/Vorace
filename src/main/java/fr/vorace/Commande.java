@@ -477,7 +477,10 @@ public final class Commande implements CommandExecutor, TabCompleter {
         if (m == null) { s.sendMessage(Messages.brut("<red>Les mobs sont désactivés (config : mobs.actif) ou n'ont pas pu démarrer.")); return; }
         String act = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "liste";
         Player p = s instanceof Player j ? j : null;
-        org.bukkit.Location ici = p != null ? p.getLocation() : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
+        // « execute as <joueur> at <joueur> run vorace mob ... » (console, bloc de commande) : autour de ce joueur
+        org.bukkit.entity.Entity cible = p != null ? p : s instanceof org.bukkit.command.ProxiedCommandSender ps
+            && ps.getCallee() instanceof org.bukkit.entity.Entity en ? en : null;
+        org.bukkit.Location ici = cible != null ? cible.getLocation() : org.bukkit.Bukkit.getWorlds().get(0).getSpawnLocation();
         switch (act) {
             case "invoquer" -> {
                 if (a.length < 3) { s.sendMessage(Messages.brut("<red>Utilisation : /vorace mob invoquer <mob> [nombre]")); return; }

@@ -241,8 +241,9 @@ mouton:
   joueur fait s'envoler un oiseau, ceux de la même espèce posés à moins de 8 blocs partent avec lui (volée).
 - **Décors vivants** (`type: decor`) : un modèle posé sans entité (bain d'oiseaux, nid, mangeoire), qui joue son
   `idle` en boucle et ses animations `ennui` de temps en temps. Avec `envol: 4` il joue `envol` quand un joueur
-  approche ; s'il a aussi une animation `retour`, il reste en place (les oiseaux sont partis) et la joue 15 s après
-  le départ du dernier joueur proche, sinon il disparaît et son point d'apparition le remplace plus tard.
+  approche (deux fois plus loin s'il court, deux fois moins s'il est accroupi) ; s'il a aussi une animation `retour`,
+  il reste en place (les oiseaux sont partis) et la joue 15 s après le départ du dernier joueur proche, sinon il
+  disparaît et son point d'apparition le remplace plus tard.
 - **Joueurs en créatif** : ils comptent comme les autres pour faire vivre les mobs et les effrayer (oiseaux,
   lapins...), mais ne sont jamais attaqués. Seuls les spectateurs et les joueurs invisibles sont ignorés.
 - **IA** : `ia: vorace` (le cerveau remplace l'IA de déplacement du jeu), `ia: jeu` (l'IA du jeu, gardée en laisse :

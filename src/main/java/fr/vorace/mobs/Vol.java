@@ -54,6 +54,8 @@ public final class Vol {
     /** Posé et en train de marcher. */
     public boolean marche() { return marche; }
     public double parcouru() { return parcouru; }
+    /** Oiseau qui marche au sol quand il est posé (entre deux pas, il picore). */
+    public boolean marcheur() { return vitesseMarche > 0; }
 
     /** Fait trottiner l'oiseau au sol quand il est posé (blocs par seconde) ; il reste alors posé plus longtemps. */
     public Vol marcheur(double vitesse) {
